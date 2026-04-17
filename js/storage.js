@@ -12,8 +12,8 @@ window.onerror = function(m, s, l, c, e) { console.error('SCRIPT ERROR:', m, 'li
 // APP_VERSION is the only version string to update on each release.
 // APP_BUILD_DATE is computed dynamically at page load — always the current date.
 // All badges, title and exports derive from these two constants.
-const APP_VERSION    = 'v4.0.0';
-const APP_BUILD_DATE = (function() {
+var APP_VERSION    = 'v4.0.0';
+var APP_BUILD_DATE = (function() {
   var d = new Date();
   return d.getFullYear() + '-' +
     String(d.getMonth() + 1).padStart(2, '0') + '-' +
@@ -65,7 +65,7 @@ var INTEL_FLAG_META = {
 // Pass 2 now asks Claude for a JSON graph object, not raw Mermaid.
 // graphToMermaid() is the deterministic compiler that converts it.
 // Node types: start | end | step | decision | subprocess | note
-const GRAPH_SCHEMA_EXAMPLE = {
+var GRAPH_SCHEMA_EXAMPLE = {
   nodes: [
     { id: 'A', type: 'start',    label: 'Start' },
     { id: 'B', type: 'step',     label: 'Customer submits claim', lane: 'Agent' },
@@ -360,7 +360,7 @@ let lastSVG = '';
 let currentRightTab = 'code';
 let currentLeftTab  = 'raw';
 let zoomLevel = 1;
-const STORAGE_KEY = 'fc_saved_v1';
+var STORAGE_KEY = 'fc_saved_v1';
 
 // ══════════════════════════════════════════════════════════════════
 // ── STORAGE & NAMING LAYER  (spec v3.9+, April 2026)             ──
@@ -1352,7 +1352,7 @@ async function loadChartsFromGitHub(projectSlug) {
 var _savedGroupBy = 'cluster'; // 'cluster'|'chapter'|'type'|'tag'|'none'
 
 // Pipeline data object — populated stage by stage
-const pipe = {
+var pipe = {
   raw:       '',
   clean:     '',
   chunks:    [],
@@ -1380,7 +1380,7 @@ const pipe = {
 };
 
 // Actor colour palette
-const ACTOR_COLORS = [
+var ACTOR_COLORS = [
   { bg:'#EEEDFE', border:'#534AB7', text:'#3C3489' }, // Player  — purple
   { bg:'#E1F5EE', border:'#0F6E56', text:'#085041' }, // Agent   — teal
   { bg:'#FAECE7', border:'#993C1D', text:'#712B13' }, // System  — coral
