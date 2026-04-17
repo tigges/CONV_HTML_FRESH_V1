@@ -355,11 +355,11 @@ function onLayoutEngineChange() {
 }
 
 // ── App State ─────────────────────────────────────────────────────
-let renderTimer = null;
-let lastSVG = '';
-let currentRightTab = 'code';
-let currentLeftTab  = 'raw';
-let zoomLevel = 1;
+var renderTimer = null;
+var lastSVG = '';
+var currentRightTab = 'code';
+var currentLeftTab  = 'raw';
+var zoomLevel = 1;
 var STORAGE_KEY = 'fc_saved_v1';
 
 // ══════════════════════════════════════════════════════════════════
