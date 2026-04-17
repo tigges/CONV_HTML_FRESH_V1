@@ -283,8 +283,10 @@ function syncVersion() {
 syncVersion(); // run immediately (header badge exists above this script tag)
 
 // ── Library init ──────────────────────────────────────────────────
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
 // ── Mermaid config factory ────────────────────────────────────────
 // Single source of truth for mermaid.initialize() options.
@@ -340,7 +342,7 @@ function getMermaidConfig() {
   return cfg;
 }
 
-mermaid.initialize(getMermaidConfig());
+if (typeof mermaid !== 'undefined') { mermaid.initialize(getMermaidConfig()); }
 
 // ── Layout engine switching (v2.9.0) ─────────────────────────────
 // ELK is loaded via CDN (elkjs). When selected, Mermaid is re-initialised
