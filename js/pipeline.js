@@ -441,9 +441,11 @@ async function runPipeline() {
   btn.textContent = '⟳ Running pipeline…';
 
   try {
+  console.log('[pipeline] start — chars:', rawText.length);
   // Stage 1: Raw
   pipe.raw = rawText;
   setPipeDot('raw', 'done');
+  console.log('[pipeline] stage 1 raw done');
   // v3.11.3: show chapter-only size when isolation is active, plus a badge
   var rawMeta = document.getElementById('raw-meta');
   if (rawMeta) {
@@ -460,23 +462,30 @@ async function runPipeline() {
   // Stage 2: Clean
   setPipeDot('clean', 'running');
   await sleep(30);
+  console.log('[pipeline] stage 2 clean start');
   pipe.clean = cleanText(rawText);
   renderCleanPane();
   setPipeDot('clean', 'done');
+  console.log('[pipeline] stage 2 clean done — chars:', pipe.clean.length);
 
   // Stage 3: Chunk
   setPipeDot('chunks', 'running');
   await sleep(30);
+  console.log('[pipeline] stage 3 chunk start');
   pipe.chunks = chunkText(pipe.clean);
   renderChunksPane();
   setPipeDot('chunks', 'done');
+  console.log('[pipeline] stage 3 chunk done — chunks:', pipe.chunks.length);
 
   // Stage 4: Pre-Parse (structure tagging)
   setPipeDot('preparse', 'running');
   await sleep(30);
+  console.log('[pipeline] stage 4 preparse start');
   pipe.preparsed = preParse(pipe.clean);
+  console.log('[pipeline] stage 4 preParse() done — items:', pipe.preparsed.length);
   renderPreParsePane();
   setPipeDot('preparse', 'done');
+  console.log('[pipeline] stage 4 preparse done');
 
   // v3.12.1: TOC detection — runs deterministically after pre-parse, before any LLM call.
   // If a TOC is detected, populate ChapterRegistry + DocumentRegistry immediately.
@@ -509,28 +518,36 @@ async function runPipeline() {
   // Stage 5: Analyse
   setPipeDot('analysis', 'running');
   await sleep(30);
+  console.log('[pipeline] stage 5 analysis start');
   runAnalysis(pipe.clean);
+  console.log('[pipeline] stage 5 runAnalysis done');
   renderAnalysisPane();
+  console.log('[pipeline] stage 5 renderAnalysisPane done');
   setPipeDot('analysis', 'done');
+  console.log('[pipeline] stage 5 analysis done');
 
   // Re-enable button and update status
   btn.disabled = false;
   btn.textContent = '→ Generate Chart';
   updatePipelineStatus(true);
+  console.log('[pipeline] updatePipelineStatus done');
   updatePreflight();
+  console.log('[pipeline] updatePreflight done');
 
   // Suggest diagram type based on what was found
   var suggestion = suggestDiagramType(pipe.preparsed, pipe.actors);
+  console.log('[pipeline] suggestDiagramType done:', suggestion && suggestion.type);
   renderSuggestion(suggestion);
+  console.log('[pipeline] renderSuggestion done');
 
   var nodeEst = estimateNodeCount(pipe.preparsed);
   showToast('Pipeline done — ' + pipe.chunks.length + ' chunk' + (pipe.chunks.length !== 1 ? 's' : '') +
     ', ' + pipe.actors.length + ' actor' + (pipe.actors.length !== 1 ? 's' : '') + ' · ~' + nodeEst + ' nodes · click Generate Chart ↓');
-
+  console.log('[pipeline] complete ✓');
   switchLeftTab('preparse');
 
   } catch(err) {
-    console.error('[runPipeline] Error:', err);
+    console.error('[runPipeline] Error at stage:', err.message, err);
     showToast('Pipeline error: ' + err.message);
   } finally {
     btn.disabled = false;
@@ -1593,6 +1610,7 @@ function buildStructuredContext(preparsed, toc) {
 }
 
 function renderPreParsePane() {
+  try {
   var empty   = document.getElementById('preparse-empty');
   var content = document.getElementById('preparse-content');
   var list    = document.getElementById('preparse-list');
@@ -1658,6 +1676,9 @@ function renderPreParsePane() {
   // v3.1.0: render graveyard and diff panels
   renderGraveyardSection();
   renderPipeDiffSection();
+  } catch(err) {
+    console.error('[renderPreParsePane]', err);
+  }
 }
 
 // ── v3.1.0: Graveyard section ─────────────────────────────────────
@@ -2197,6 +2218,7 @@ function runAnalysis(text) {
 }
 
 function renderAnalysisPane() {
+  try {
   document.getElementById('analysis-empty').style.display   = 'none';
   document.getElementById('analysis-content').style.display = 'block';
   document.getElementById('analysis-meta').textContent      = pipe.stats.words.toLocaleString() + ' words';
@@ -2235,6 +2257,9 @@ function renderAnalysisPane() {
     '<span class="stat-item"><span class="stat-num">' + pipe.chunks.length + '</span> chunks</span>';
 
   renderSwimlanePreview();
+  } catch(err) {
+    console.error('[renderAnalysisPane]', err);
+  }
 }
 
 function toggleActor(i) {
