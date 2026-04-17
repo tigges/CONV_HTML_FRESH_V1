@@ -1,0 +1,2159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Flowchart Converter v4.0</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<!-- CodeMirror 5 (v2.8.0) — syntax-highlighted Mermaid code editor -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
+<!-- ELK layout engine for Mermaid (v2.9.0) -->
+<script src="https://cdn.jsdelivr.net/npm/elkjs@0.9.3/lib/elk.bundled.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue-700: #1d4ed8; --blue-600: #2563eb; --blue-500: #3b82f6;
+  --blue-400: #60a5fa; --blue-200: #bfdbfe; --blue-100: #dbeafe; --blue-50: #eff6ff;
+  --gray-900: #111827; --gray-800: #1f2937; --gray-700: #374151; --gray-600: #4b5563;
+  --gray-500: #6b7280; --gray-400: #9ca3af; --gray-300: #d1d5db;
+  --gray-200: #e5e7eb; --gray-100: #f3f4f6; --gray-50: #f9fafb; --white: #ffffff;
+  --red-50: #fef2f2; --red-200: #fecaca; --red-600: #dc2626;
+  --amber-50: #fffbeb; --amber-200: #fde68a; --amber-700: #b45309;
+  --green-50: #f0fdf4; --green-200: #bbf7d0; --green-600: #16a34a; --green-700: #15803d;
+  --purple-50: #faf5ff; --purple-200: #e9d5ff; --purple-600: #9333ea;
+  --orange-50: #fff7ed; --orange-200: #fed7aa; --orange-600: #ea580c;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.04);
+  --tab-height: 30px;
+}
+
+body {
+  height: 100vh; overflow: hidden;
+  background: var(--gray-100); color: var(--gray-900);
+  font-family: 'Inter', system-ui, sans-serif; font-size: 13px;
+  display: flex; flex-direction: column;
+}
+
+/* ── Header ── */
+header {
+  background: var(--white); border-bottom: 1px solid var(--gray-200);
+  padding: 0 12px; height: 40px;
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0; box-shadow: var(--shadow-sm); z-index: 10; overflow: hidden;
+}
+.logo {
+  width: 26px; height: 26px;
+  background: linear-gradient(135deg, var(--blue-700), var(--blue-500));
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: white; box-shadow: 0 2px 5px rgba(37,99,235,0.3); flex-shrink: 0;
+}
+.brand { display: flex; flex-direction: column; }
+.brand h1 { font-size: 12px; font-weight: 700; color: var(--gray-900); letter-spacing: -0.01em; }
+.brand p  { font-size: 9px; color: var(--gray-400); }
+/* Hide tagline + "Mermaid + Claude AI" badge at ≤1400px — they use ~160px */
+@media (max-width: 1400px) { .brand p { display: none; } }
+@media (max-width: 1280px) { .badge { display: none; } }
+.hdiv { width: 1px; height: 22px; background: var(--gray-200); margin: 0 2px; flex-shrink: 0; }
+.badge {
+  font-size: 10px; font-weight: 600; color: var(--blue-600);
+  background: var(--blue-50); border: 1px solid var(--blue-100);
+  border-radius: 4px; padding: 2px 7px; white-space: nowrap;
+}
+.version-badge {
+  font-size: 10px; font-weight: 600; color: var(--gray-500);
+  background: var(--gray-100); border: 1px solid var(--gray-200);
+  border-radius: 4px; padding: 2px 7px; white-space: nowrap; margin-left: auto;
+}
+
+/* ── API / Config Bar ── */
+#apibar {
+  background: var(--blue-50); border-bottom: 1px solid var(--blue-100);
+  padding: 2px 10px; display: flex; align-items: center; gap: 5px;
+  flex-shrink: 0; flex-wrap: wrap; overflow: visible; min-height: 0;
+}
+#apibar label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
+  color: var(--blue-700); text-transform: uppercase; white-space: nowrap;
+}
+/* All selects in the config bar — consistent small size */
+#apibar select, #model-select, #diagram-type, #lane-orient, #layout-engine, #domain-preset, #gh-project {
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 5px;
+  color: var(--gray-700); font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
+  padding: 3px 6px; outline: none; cursor: pointer; box-shadow: var(--shadow-sm);
+}
+#apikey {
+  flex: 1; max-width: 360px; background: var(--white);
+  border: 1px solid var(--gray-200); border-radius: 6px;
+  color: var(--gray-700); font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 4px 10px; outline: none; box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#apikey:focus { border-color: var(--blue-500); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+#apikey::placeholder { color: var(--gray-300); }
+#apikey-saved {
+  font-size: 10px; color: var(--green-600); font-weight: 600;
+  opacity: 0; transition: opacity 0.4s; white-space: nowrap;
+  display: flex; align-items: center; gap: 3px;
+}
+#apikey-saved.visible { opacity: 1; }
+#apikey-clear {
+  font-size: 10px; color: var(--gray-400); cursor: pointer; background: none;
+  border: none; padding: 0 2px; line-height: 1; display: none;
+}
+#apikey-clear:hover { color: var(--red-600); }
+#model-select, #diagram-type {
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 6px;
+  color: var(--gray-700); font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
+  padding: 4px 8px; outline: none; cursor: pointer; box-shadow: var(--shadow-sm);
+}
+#api-status { font-size: 10px; color: var(--gray-400); font-weight: 500; white-space: nowrap; }
+
+/* ── Main Two-Column Grid ── */
+.main-grid { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; min-height: 0; }
+/* overflow:visible on panel so position:absolute dropdowns (Export menu) can escape */
+.panel { display: flex; flex-direction: column; overflow: visible; background: var(--white); }
+.panel:first-child { border-right: 1px solid var(--gray-200); overflow: hidden; }
+
+/* ── Tab Bars ── */
+/* Two-row structure: tab buttons on row 1, actions on row 2 (right panel only) */
+.tab-bar {
+  display: flex; flex-direction: column;
+  border-bottom: 1px solid var(--gray-200);
+  flex-shrink: 0; background: var(--gray-50);
+}
+/* Row 1: the tab buttons themselves */
+.tab-bar-tabs {
+  display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none; /* Firefox */
+  height: var(--tab-height, 30px);
+}
+.tab-bar-tabs::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+/* Unified tab button — shared by both left (pipeline) and right (output) panels */
+.tab-btn {
+  padding: 0 10px; background: transparent; border: none;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  height: var(--tab-height, 30px);
+  color: var(--gray-500); font-family: 'Inter', sans-serif;
+  font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+  letter-spacing: 0.01em;
+}
+.tab-btn:hover { color: var(--gray-800); background: var(--gray-100); }
+.tab-btn.active { color: var(--blue-600); border-bottom-color: var(--blue-600); background: var(--white); }
+/* Row 2: action buttons — their own row, always single-line */
+.tab-bar-actions {
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-top: 1px solid var(--gray-200);
+  background: var(--gray-50); flex-wrap: nowrap; overflow: visible;
+  min-height: 28px; position: relative;
+}
+/* Left panel tab-bar: single row (no actions row needed) */
+.panel:first-child .tab-bar { flex-direction: row; flex-wrap: nowrap; overflow: hidden; align-items: stretch; }
+.panel:first-child .tab-bar-tabs { flex: 1; height: auto; }
+.panel:first-child .tab-bar-actions { border-top: none; border-left: 1px solid var(--gray-200); padding: 0 8px; }
+/* Export dropdown items */
+.exp-item {
+  display: block; width: 100%; text-align: left;
+  padding: 6px 14px; font-size: 11px; font-family: 'Inter', sans-serif;
+  background: none; border: none; cursor: pointer; color: var(--gray-700);
+  white-space: nowrap;
+}
+.exp-item:hover { background: var(--gray-50); }
+
+/* Pipeline status dots */
+.pipe-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  background: var(--gray-300); transition: background 0.3s;
+}
+.pipe-dot.done    { background: var(--blue-500); }
+.pipe-dot.running { background: var(--blue-400); animation: pulse 0.9s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+/* ── Tab Panes ── */
+.tab-pane { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+.tab-pane.active { display: flex; }
+
+/* ── Buttons ── */
+.btn-xs {
+  padding: 4px 10px; background: var(--white);
+  border: 1px solid var(--gray-200); border-radius: 5px;
+  color: var(--gray-600); font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
+  cursor: pointer; white-space: nowrap; transition: all 0.15s; box-shadow: var(--shadow-sm);
+}
+.btn-xs:hover { background: var(--gray-50); border-color: var(--gray-300); color: var(--gray-900); }
+.btn-xs:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-xs.primary { background: var(--blue-600); border-color: var(--blue-600); color: white; }
+.btn-xs.primary:hover { background: var(--blue-700); }
+.btn-xs.success { background: var(--blue-600); border-color: var(--blue-600); color: white; }
+.btn-xs.success:hover { background: var(--blue-700); }
+.btn-xs.danger  { color: var(--red-600); border-color: var(--red-200); }
+.btn-xs.danger:hover  { background: var(--red-50); }
+
+/* ── LEFT: Stage headers ── */
+.stage-header {
+  padding: 6px 14px; border-bottom: 1px solid var(--gray-100);
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  flex-shrink: 0; background: var(--gray-50);
+}
+.stage-label { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; color: var(--blue-600); text-transform: uppercase; }
+.stage-meta  { font-size: 10px; color: var(--gray-400); font-weight: 500; }
+.header-right { display: flex; align-items: center; gap: 6px; }
+
+/* ── Raw text pane ── */
+.input-wrapper { position: relative; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#drop-hint {
+  position: absolute; inset: 8px; display: none;
+  align-items: center; justify-content: center; flex-direction: column; gap: 8px;
+  background: rgba(255,255,255,0.96); border: 2px dashed #93c5fd;
+  border-radius: 10px; pointer-events: none; z-index: 5;
+}
+#drop-hint .drop-icon { font-size: 28px; }
+#drop-hint p { font-size: 12px; font-weight: 600; color: var(--blue-600); }
+#input-text {
+  flex: 1; background: var(--white); border: none; outline: none;
+  color: var(--gray-700); font-family: 'Inter', sans-serif;
+  font-size: 12.5px; line-height: 1.75; padding: 14px 16px; resize: none;
+}
+#input-text::placeholder { color: var(--gray-300); }
+#filename-tag {
+  font-size: 10px; font-weight: 500; color: var(--blue-600);
+  background: var(--blue-50); border: 1px solid var(--blue-100);
+  border-radius: 4px; padding: 2px 8px; max-width: 160px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: none;
+}
+
+/* ── Pipeline viewers ── */
+.pipeline-pane { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.pipeline-viewer {
+  flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; line-height: 1.7;
+  color: var(--gray-700); padding: 14px 16px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+  background: var(--white);
+}
+.pipe-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; color: var(--gray-400); text-align: center; padding: 20px;
+}
+.pipe-empty .icon { font-size: 26px; opacity: 0.3; }
+.pipe-empty p { font-size: 11px; font-weight: 500; max-width: 180px; }
+
+/* ── Chunk cards ── */
+.chunk-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 5px; background: var(--gray-50); }
+.chunk-card { background: var(--white); border: 1px solid var(--gray-200); border-radius: 7px; overflow: hidden; box-shadow: var(--shadow-sm); }
+.chunk-header {
+  padding: 7px 11px; background: var(--gray-50); border-bottom: 1px solid var(--gray-100);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer;
+}
+.chunk-header:hover { background: var(--blue-50); }
+.chunk-title { font-size: 11px; font-weight: 600; color: var(--gray-800); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chunk-badges { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+.cbadge {
+  font-size: 9px; font-weight: 600; padding: 2px 5px; border-radius: 3px;
+  background: var(--blue-50); color: var(--blue-600); border: 1px solid var(--blue-100);
+}
+.cbadge.green  { background: var(--green-50);  color: var(--green-600);  border-color: var(--green-200); }
+.cbadge.purple { background: var(--purple-50); color: var(--purple-600); border-color: var(--purple-200); }
+.chunk-body {
+  display: none; padding: 9px 11px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px; line-height: 1.6;
+  color: var(--gray-600); white-space: pre-wrap; word-break: break-word;
+  max-height: 140px; overflow-y: auto; background: var(--white);
+}
+.chunk-card.open .chunk-body { display: block; }
+
+/* ── Analysis pane ── */
+.analysis-scroll { flex: 1; overflow-y: auto; background: var(--gray-50); }
+.analysis-section { padding: 11px 14px; border-bottom: 1px solid var(--gray-100); background: var(--white); }
+.analysis-title { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; color: var(--gray-500); text-transform: uppercase; margin-bottom: 8px; }
+.actor-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.actor-pill {
+  font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px;
+  border: 1.5px solid; cursor: pointer; transition: all 0.15s; user-select: none;
+}
+.keyword-list { display: flex; flex-wrap: wrap; gap: 4px; }
+.kw-tag { font-size: 10px; padding: 2px 7px; border-radius: 3px; background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); }
+.doc-stats { font-size: 11px; color: var(--gray-600); display: flex; gap: 14px; flex-wrap: wrap; }
+.stat-item { display: flex; align-items: center; gap: 4px; }
+.stat-num { font-weight: 700; color: var(--gray-900); }
+.swimlane-preview {
+  font-size: 11px; color: var(--gray-600); font-family: 'JetBrains Mono', monospace;
+  white-space: pre; line-height: 1.6; background: var(--gray-50);
+  border: 1px solid var(--gray-200); border-radius: 5px; padding: 9px; margin-top: 6px;
+  overflow-x: auto;
+}
+
+/* ── Convert bar ── */
+.convert-bar {
+  padding: 6px 12px; border-top: none;
+  background: var(--blue-700); flex-shrink: 0;
+  display: flex; align-items: center; gap: 6px;
+}
+#convert-btn {
+  flex: 1; padding: 7px 16px;
+  background: var(--white);
+  border: none; border-radius: 7px; color: var(--blue-700);
+  font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.18); transition: all 0.15s;
+  letter-spacing: -0.01em;
+}
+#convert-btn:hover { background: var(--blue-50); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.22); }
+#convert-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+#pipeline-only-btn {
+  padding: 7px 10px; background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3); border-radius: 7px;
+  color: var(--white); font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+}
+#pipeline-only-btn:hover { background: rgba(255,255,255,0.25); }
+#pipeline-only-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Pre-flight cost bar ── */
+#preflight-bar {
+  display: none; flex-shrink: 0;
+  background: var(--amber-50); border-top: 1px solid var(--amber-200);
+  padding: 4px 12px; gap: 10px; align-items: center; flex-wrap: wrap;
+  font-size: 10px; color: var(--amber-700);
+}
+#preflight-bar.visible { display: flex; }
+#preflight-bar .pf-item { display: flex; align-items: center; gap: 4px; }
+#preflight-bar .pf-label { font-weight: 600; }
+#preflight-bar .pf-val { font-family: 'JetBrains Mono', monospace; }
+#preflight-bar .pf-spacer { flex: 1; }
+#preflight-bar .pf-warn { color: var(--red-600); font-weight: 700; }
+#session-cost {
+  font-size: 10px; color: rgba(255,255,255,0.7); white-space: nowrap; flex-shrink: 0;
+}
+
+/* ── RIGHT: Code editor ── */
+#mermaid-editor {
+  flex: 1; background: #1a1b26; border: none; outline: none;
+  color: #9ece6a; font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; line-height: 1.75; padding: 14px 16px; resize: none;
+}
+
+/* ── Graph viewer ── */
+.viewer-area { flex: 1; overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--gray-50); }
+#error-box { background: var(--blue-50); border: 1px solid var(--blue-200); border-radius: 6px; padding: 9px 13px; color: var(--blue-700); font-size: 12px; font-weight: 500; display: none; }
+#render-error { background: var(--blue-50); border: 1px solid var(--blue-200); border-radius: 6px; padding: 9px 13px; color: var(--blue-700); font-size: 11px; font-family: 'JetBrains Mono', monospace; display: none; }
+#spinner { display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 12px; }
+.ring { width: 30px; height: 30px; border: 3px solid var(--blue-100); border-top: 3px solid var(--blue-500); border-radius: 50%; animation: spin 0.8s linear infinite; }
+#spinner p { color: var(--blue-600); font-size: 12px; font-weight: 500; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 8px; text-align: center; }
+#placeholder .d { font-size: 36px; opacity: 0.1; }
+#placeholder p { font-size: 12px; color: var(--gray-400); font-weight: 500; max-width: 180px; }
+#graph-controls { display: none; flex-direction: column; flex: 1; gap: 7px; }
+.zoom-controls { display: flex; align-items: center; gap: 5px; background: var(--white); border: 1px solid var(--gray-200); border-radius: 6px; padding: 3px 7px; box-shadow: var(--shadow-sm); width: fit-content; }
+#zoom-level { font-size: 11px; color: var(--gray-600); font-weight: 600; min-width: 36px; text-align: center; }
+#chart-viewport { flex: 1; overflow: hidden; border-radius: 7px; border: 1px solid var(--gray-200); background: var(--white); box-shadow: var(--shadow-sm); position: relative; cursor: grab; user-select: none; }
+#chart-viewport.panning { cursor: grabbing; }
+#chart-inner { transform-origin: top left; transition: transform 0.15s; padding: 24px; display: inline-block; min-width: 100%; min-height: 100%; }
+#chart-inner svg { display: block; max-width: none; height: auto; }
+
+/* ── Saved list ── */
+.saved-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 5px; background: var(--gray-50); }
+.saved-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 8px; }
+.saved-empty .d { font-size: 30px; opacity: 0.1; }
+.saved-empty p { font-size: 11px; color: var(--gray-400); font-weight: 500; max-width: 180px; text-align: center; }
+.chart-card { background: var(--white); border: 1px solid var(--gray-200); border-radius: 7px; padding: 9px 11px; display: flex; align-items: center; gap: 9px; transition: all 0.15s; box-shadow: var(--shadow-sm); }
+.chart-card:hover { border-color: #93c5fd; box-shadow: var(--shadow); }
+.card-icon { width: 28px; height: 28px; border-radius: 6px; background: var(--blue-50); border: 1px solid var(--blue-100); display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; color: var(--blue-500); }
+.card-info { flex: 1; min-width: 0; }
+.card-name { font-size: 12px; font-weight: 600; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-meta { font-size: 10px; color: var(--gray-400); margin-top: 1px; }
+.card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* ── Save dialog ── */
+#save-dialog { display: none; position: fixed; inset: 0; background: rgba(17,24,39,0.45); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+#save-dialog.open { display: flex; }
+.dialog-box { background: var(--white); border: 1px solid var(--gray-200); border-radius: 12px; padding: 24px 28px; width: 380px; box-shadow: var(--shadow-xl); animation: slideUp 0.18s ease; }
+@keyframes slideUp { from { transform: translateY(8px); opacity:0.7; } to { transform:none; opacity:1; } }
+.dialog-title { font-size: 14px; font-weight: 700; color: var(--gray-900); margin-bottom: 3px; }
+.dialog-sub   { font-size: 12px; color: var(--gray-500); margin-bottom: 15px; }
+.dialog-input { width: 100%; background: var(--white); border: 1px solid var(--gray-200); border-radius: 6px; color: var(--gray-900); font-family: 'Inter', sans-serif; font-size: 13px; padding: 8px 11px; outline: none; margin-bottom: 15px; transition: border-color 0.15s, box-shadow 0.15s; }
+.dialog-input:focus { border-color: var(--blue-500); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+.dialog-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.btn-cancel { padding: 7px 15px; background: var(--white); border: 1px solid var(--gray-200); border-radius: 6px; color: var(--gray-600); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+.btn-cancel:hover { border-color: var(--gray-300); color: var(--gray-900); }
+.btn-save-confirm { padding: 7px 18px; background: var(--blue-600); border: none; border-radius: 6px; color: white; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+.btn-save-confirm:hover { background: var(--blue-700); }
+
+/* ── Toast ── */
+#toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--gray-900); border-radius: 6px; padding: 8px 18px; color: white; font-size: 12px; font-weight: 500; opacity: 0; transition: all 0.25s; z-index: 200; pointer-events: none; box-shadow: var(--shadow-lg); }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
+
+/* ── Pre-parse tab ── */
+.preparse-list {
+  flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 3px;
+  background: var(--gray-50);
+}
+.pp-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 5px;
+  padding: 6px 10px; transition: border-color 0.15s, background 0.15s;
+}
+.pp-row:hover { border-color: #93c5fd; }
+.pp-row.traced { border-color: var(--blue-500); background: var(--blue-50); box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+.pp-tag {
+  font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+  white-space: nowrap; flex-shrink: 0; margin-top: 1px; letter-spacing: 0.04em;
+  text-transform: uppercase; font-family: 'JetBrains Mono', monospace;
+}
+.pp-tag.heading  { background: #1e3a5f; color: white; }
+.pp-tag.process    { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+.pp-tag.subprocess { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+.pp-tag.policy     { background: #fdf4ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+.pp-tag.cluster    { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+.pp-tag.step     { background: var(--blue-100); color: var(--blue-700); border: 1px solid var(--blue-200); }
+.pp-tag.decision { background: #fef9c3; color: #713f12; border: 1px solid #fde68a; }
+.pp-tag.outcome  { background: var(--green-50); color: var(--green-700); border: 1px solid var(--green-200); }
+.pp-tag.condition{ background: var(--purple-50); color: var(--purple-600); border: 1px solid var(--purple-200); }
+.pp-tag.actor    { background: var(--orange-50); color: var(--orange-600); border: 1px solid var(--orange-200); }
+.pp-tag.status   { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+.pp-tag.note     { background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); }
+.pp-actor-badge  { font-size: 9px; font-weight: 700; border-radius: 3px; padding: 1px 4px; margin-left: 5px;
+                   background: var(--orange-50); color: var(--orange-600); border: 1px solid var(--orange-200); }
+.pp-text { font-size: 11.5px; color: var(--gray-700); line-height: 1.5; flex: 1; }
+.pp-label { font-size: 10px; color: var(--gray-400); margin-top: 2px; font-style: italic; }
+
+/* Pre-parse legend */
+.pp-legend {
+  padding: 6px 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+  border-bottom: 1px solid var(--gray-100); background: var(--white); flex-shrink: 0;
+}
+.pp-legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--gray-500); }
+
+/* ── Validation warnings ── */
+.validation-bar {
+  display: none; padding: 8px 12px; gap: 8px; flex-direction: column;
+  background: var(--amber-50); border-top: 1px solid var(--amber-200); flex-shrink: 0;
+}
+.validation-bar.visible { display: flex; }
+.validation-warn {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; color: var(--amber-700); font-weight: 500;
+}
+.validation-warn .v-icon { font-size: 13px; flex-shrink: 0; }
+.validation-fix { font-size: 10px; color: var(--amber-700); opacity: 0.8; }
+
+/* ── Logic tab ── */
+.logic-pane {
+  flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+  background: var(--gray-50); gap: 0;
+}
+.logic-section {
+  border-bottom: 1px solid var(--gray-200); padding: 14px 16px;
+}
+.logic-section:last-child { border-bottom: none; }
+.logic-section-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--blue-600); margin-bottom: 10px; display: flex; align-items: center; gap: 7px;
+}
+.logic-version-badge {
+  font-size: 9px; font-weight: 600; background: var(--blue-50); color: var(--blue-600);
+  border: 1px solid var(--blue-100); border-radius: 3px; padding: 1px 6px;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: 0;
+}
+/* Stage flow */
+.logic-stages {
+  display: flex; align-items: center; gap: 0; flex-wrap: nowrap; overflow-x: auto;
+  padding-bottom: 4px;
+}
+.logic-stage {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  flex-shrink: 0;
+}
+.logic-stage-box {
+  padding: 6px 10px; border-radius: 6px; font-size: 10px; font-weight: 600;
+  white-space: nowrap; border: 1px solid transparent; text-align: center; min-width: 90px;
+}
+.logic-stage-box.s1 { background:#f3f4f6; border-color:#d1d5db; color:#374151; }
+.logic-stage-box.s2 { background:#dbeafe; border-color:#93c5fd; color:#1e40af; }
+.logic-stage-box.s3 { background:#ede9fe; border-color:#c4b5fd; color:#5b21b6; }
+.logic-stage-box.s4 { background:#fef9c3; border-color:#fde68a; color:#92400e; }
+.logic-stage-box.s5 { background:#d1fae5; border-color:#6ee7b7; color:#065f46; }
+.logic-stage-sub { font-size: 9px; color: var(--gray-400); text-align: center; max-width: 90px; line-height: 1.3; }
+.logic-stage-arrow { font-size: 14px; color: var(--gray-300); flex-shrink: 0; margin: 0 2px; padding-bottom: 14px; }
+
+/* Tag table */
+.logic-tag-table { width: 100%; border-collapse: collapse; }
+.logic-tag-table th {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--gray-400); padding: 4px 8px; border-bottom: 1px solid var(--gray-200);
+  text-align: left; background: var(--gray-50);
+}
+.logic-tag-table td {
+  font-size: 10.5px; color: var(--gray-700); padding: 5px 8px;
+  border-bottom: 1px solid var(--gray-100); vertical-align: top; line-height: 1.4;
+}
+.logic-tag-table tr:last-child td { border-bottom: none; }
+.logic-tag-table tr:hover td { background: var(--blue-50); }
+.ltag {
+  display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 6px;
+  border-radius: 3px; font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap; letter-spacing: 0.03em;
+}
+.ltag.heading  { background:#1e3a5f; color:white; }
+.ltag.note     { background:#f3f4f6; color:#374151; border:1px solid #d1d5db; }
+.ltag.step     { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+.ltag.decision { background:#fef9c3; color:#92400e; border:1px solid #fde68a; }
+.ltag.condition{ background:#ede9fe; color:#5b21b6; border:1px solid #c4b5fd; }
+.ltag.outcome  { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+.ltag.process  { background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; }
+.ltag.subprocess{background:#f0f9ff; color:#0284c7; border:1px solid #bae6fd; }
+.ltag.policy   { background:#fdf4ff; color:#7e22ce; border:1px solid #e9d5ff; }
+.ltag.cluster  { background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
+.ltag.status   { background:#f0f9ff; color:#0369a1; border:1px solid #bae6fd; }
+.logic-mmd-out {
+  font-size: 9px; font-family: 'JetBrains Mono', monospace;
+  color: var(--gray-500); white-space: nowrap;
+}
+.logic-priority {
+  font-size: 9px; color: var(--gray-400); font-weight: 600; text-align: center;
+}
+
+/* ── Graveyard (v3.1.0) ── */
+.graveyard-section {
+  border-top: 2px dashed #d1d5db; margin: 8px 8px 0 8px; border-radius: 6px;
+  background: #f8f8f8; overflow: hidden; flex-shrink: 0;
+}
+.graveyard-toggle {
+  display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+  cursor: pointer; user-select: none;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: #6b7280;
+}
+.graveyard-toggle:hover { background: #f0f0f0; }
+.graveyard-toggle .gy-arrow { font-size: 8px; margin-left: auto; transition: transform 0.2s; }
+.graveyard-toggle.open .gy-arrow { transform: rotate(90deg); }
+.graveyard-body { display: none; padding: 0 8px 8px 8px; }
+.graveyard-body.open { display: block; }
+.graveyard-meta { font-size: 10px; color: #9ca3af; padding: 4px 2px 6px 2px; }
+.gy-row {
+  display: flex; align-items: flex-start; gap: 8px; padding: 5px 8px;
+  border-radius: 4px; border: 1px solid #e5e7eb; background: #fff;
+  margin-bottom: 3px; opacity: 0.85;
+}
+.gy-row:hover { opacity: 1; border-color: #9ca3af; }
+.gy-conf-badge {
+  font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+  white-space: nowrap; flex-shrink: 0; font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.03em;
+}
+.gy-conf-badge.hard   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.gy-conf-badge.medium { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.gy-conf-badge.soft   { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
+.gy-text { font-size: 11px; color: #6b7280; flex: 1; line-height: 1.4; }
+.gy-reason { font-size: 9.5px; color: #9ca3af; margin-top: 1px; font-style: italic; }
+.gy-rescue-btn {
+  font-size: 9px; padding: 2px 6px; border-radius: 3px; border: 1px solid #d1fae5;
+  background: #ecfdf5; color: #065f46; cursor: pointer; flex-shrink: 0;
+  font-weight: 600; margin-top: 1px;
+}
+.gy-rescue-btn:hover { background: #d1fae5; }
+
+/* ── Pipeline Diff (v3.1.0) ── */
+.pipe-diff-section {
+  border-top: 1px solid #e5e7eb; flex-shrink: 0; background: #fafafa;
+}
+.pipe-diff-toggle {
+  display: flex; align-items: center; gap: 7px; padding: 6px 10px;
+  cursor: pointer; user-select: none;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: #6b7280;
+}
+.pipe-diff-toggle:hover { background: #f0f0f0; }
+.pipe-diff-toggle .pd-arrow { font-size: 8px; margin-left: auto; transition: transform 0.2s; }
+.pipe-diff-toggle.open .pd-arrow { transform: rotate(90deg); }
+.pipe-diff-body { display: none; padding: 0 10px 10px 10px; }
+.pipe-diff-body.open { display: block; }
+.diff-stage-row {
+  display: flex; align-items: baseline; gap: 8px; padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0; font-size: 10.5px;
+}
+.diff-stage-row:last-child { border-bottom: none; }
+.diff-stage-name {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: #3b82f6; width: 90px; flex-shrink: 0; font-family: 'JetBrains Mono', monospace;
+}
+.diff-stage-stat { color: #374151; }
+.diff-stage-stat .removed { color: #dc2626; font-weight: 600; }
+.diff-stage-stat .graved  { color: #d97706; font-weight: 600; }
+.diff-stage-stat .kept    { color: #059669; font-weight: 600; }
+.diff-stage-off { color: #9ca3af; font-style: italic; }
+
+/* ── Intel Flags (v3.1.0) ── */
+.intel-flag-grid { display: flex; flex-direction: column; gap: 6px; }
+.intel-flag-row {
+  display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px;
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 5px;
+}
+.intel-flag-row:hover { border-color: #93c5fd; }
+.intel-toggle {
+  position: relative; width: 32px; height: 18px; flex-shrink: 0; margin-top: 2px;
+  cursor: pointer;
+}
+.intel-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.intel-toggle-track {
+  position: absolute; inset: 0; border-radius: 9px;
+  background: #d1d5db; transition: background 0.2s;
+}
+.intel-toggle input:checked + .intel-toggle-track { background: #2563eb; }
+.intel-toggle-thumb {
+  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+  border-radius: 50%; background: white; transition: transform 0.2s;
+  pointer-events: none;
+}
+.intel-toggle input:checked ~ .intel-toggle-thumb { transform: translateX(14px); }
+.intel-flag-info { flex: 1; }
+.intel-flag-name {
+  font-size: 11px; font-weight: 700; color: var(--gray-800); margin-bottom: 2px;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em;
+}
+.intel-flag-desc { font-size: 10px; color: var(--gray-500); line-height: 1.4; }
+.intel-flag-commit { font-size: 9px; color: var(--blue-400); margin-top: 2px; }
+
+/* ── Confidence badge on pp-row (v3.1.0) ── */
+.pp-conf-pill {
+  font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 99px;
+  margin-left: 4px; font-family: 'JetBrains Mono', monospace; flex-shrink: 0;
+  vertical-align: middle;
+}
+.pp-conf-pill.hi  { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.pp-conf-pill.mid { background: #fef9c3; color: #92400e; border: 1px solid #fde68a; }
+.pp-conf-pill.lo  { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+/* ── Pass 1 Step Editor (v3.2.0) ── */
+.pass1-step-row {
+  display: flex; align-items: flex-start; gap: 7px; padding: 5px 6px;
+  border-radius: 4px; border: 1px solid var(--gray-100); background: var(--white);
+  margin-bottom: 3px; transition: border-color 0.12s;
+}
+.pass1-step-row:hover { border-color: #93c5fd; }
+.pass1-step-row.excluded { opacity: 0.45; }
+.pass1-step-row input[type=checkbox] { margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+.pass1-step-id {
+  font-size: 9px; font-weight: 700; color: var(--gray-400);
+  font-family: 'JetBrains Mono', monospace; flex-shrink: 0; margin-top: 1px; min-width: 22px;
+}
+.pass1-step-label { font-size: 11.5px; color: var(--gray-800); flex: 1; line-height: 1.4; }
+.pass1-step-actor { font-size: 9px; color: var(--orange-600); margin-left: 4px; }
+
+/* ── Detail level selector (v3.2.0) ── */
+.detail-level-wrap {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px; background: var(--gray-50); border-radius: 6px;
+  border: 1px solid var(--gray-200); margin-bottom: 6px;
+}
+.detail-level-label { font-size: 10px; font-weight: 700; color: var(--gray-600); flex-shrink: 0; }
+.detail-level-btn {
+  font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 4px;
+  border: 1px solid var(--gray-300); background: var(--white); color: var(--gray-600);
+  cursor: pointer; transition: all 0.12s;
+}
+.detail-level-btn.active { background: var(--blue-600); color: white; border-color: var(--blue-700); }
+.detail-level-btn:hover:not(.active) { border-color: #93c5fd; color: var(--blue-600); }
+
+/* Live document snapshot */
+.logic-snap-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px;
+}
+.logic-snap-card {
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 5px;
+  padding: 6px 8px; text-align: center;
+}
+.logic-snap-count { font-size: 18px; font-weight: 700; color: var(--gray-900); line-height: 1; margin-bottom: 2px; }
+.logic-snap-label { font-size: 9px; color: var(--gray-400); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+.logic-bar-wrap { display: flex; flex-direction: column; gap: 4px; }
+.logic-bar-row { display: flex; align-items: center; gap: 7px; }
+.logic-bar-label { font-size: 9px; font-family: 'JetBrains Mono', monospace; font-weight: 700; width: 42px; flex-shrink: 0; text-align: right; }
+.logic-bar-track { flex: 1; background: var(--gray-100); border-radius: 3px; height: 10px; overflow: hidden; }
+.logic-bar-fill  { height: 100%; border-radius: 3px; transition: width 0.4s; }
+.logic-bar-count { font-size: 9px; color: var(--gray-400); width: 22px; flex-shrink: 0; }
+.logic-snap-empty { font-size: 11px; color: var(--gray-400); text-align: center; padding: 12px 0; }
+
+/* ── Changelog ── */
+.cl-entry { border-left: 3px solid var(--blue-300,#93c5fd); margin-bottom: 14px; padding-left: 10px; }
+.cl-entry.current { border-color: var(--blue-500); }
+.cl-version { font-size: 11px; font-weight: 700; color: var(--blue-700); letter-spacing: -0.01em; }
+.cl-date    { font-size: 10px; color: var(--gray-400); margin-left: 6px; }
+.cl-summary { font-size: 11px; color: var(--gray-700); margin: 3px 0 4px; font-weight: 500; }
+.cl-changes { list-style: none; padding: 0; margin: 0; }
+.cl-changes li { font-size: 10.5px; color: var(--gray-600); padding: 1px 0; line-height: 1.5; }
+.cl-changes li::before { content: "·"; margin-right: 5px; color: var(--blue-400); font-weight: 700; }
+
+/* ── Split view ── */
+.main-grid.split-active { grid-template-columns: 1fr 0px; }
+.main-grid.split-active .panel:last-child { display: none; }
+#split-toggle.active { background: var(--blue-50); border-color: var(--blue-300, #93c5fd); color: var(--blue-600); }
+
+/* ── GitHub status ── */
+.gh-ok   { color: var(--green-600) !important; }
+.gh-err  { color: var(--red-600)   !important; }
+.gh-busy { color: var(--blue-500)  !important; animation: pulse 0.9s infinite; }
+
+/* ── Inline node label editing ── */
+#node-edit-overlay {
+  position: absolute; display: none; z-index: 500;
+  pointer-events: all;
+}
+#node-edit-input {
+  border: 2px solid var(--blue-500); border-radius: 4px;
+  padding: 3px 8px; font-family: 'Inter', sans-serif; font-size: 12px;
+  background: white; color: var(--gray-900); outline: none;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+  min-width: 80px; text-align: center;
+}
+#node-edit-hint {
+  font-size: 10px; color: var(--gray-400); text-align: center;
+  margin-top: 3px; background: white; border-radius: 3px; padding: 1px 5px;
+  border: 1px solid var(--gray-200);
+}
+
+/* ── Print / PDF export ── */
+@media print {
+  body > *:not(#print-area) { display: none !important; }
+  #print-area {
+    display: block !important;
+    position: fixed; inset: 0; background: white; z-index: 99999;
+    padding: 20mm;
+  }
+  #print-area h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #111; }
+  #print-area .print-meta { font-size: 11px; color: #666; margin-bottom: 16px; }
+  #print-area svg { max-width: 100%; height: auto; }
+}
+#print-area { display: none; }
+
+/* ── Export with metadata ── */
+#export-dialog {
+  display: none; position: fixed; inset: 0;
+  background: rgba(17,24,39,0.45); z-index: 100;
+  align-items: center; justify-content: center; backdrop-filter: blur(2px);
+}
+#export-dialog.open { display: flex; }
+.export-box {
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 12px;
+  padding: 24px 28px; width: 420px; box-shadow: var(--shadow-xl);
+  animation: slideUp 0.18s ease;
+}
+.export-box h3 { font-size: 14px; font-weight: 700; color: var(--gray-900); margin-bottom: 16px; }
+.export-field { margin-bottom: 12px; }
+.export-field label { display: block; font-size: 10px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.export-field input, .export-field select {
+  width: 100%; background: var(--white); border: 1px solid var(--gray-200);
+  border-radius: 6px; color: var(--gray-900); font-family: 'Inter', sans-serif;
+  font-size: 12px; padding: 7px 10px; outline: none;
+  transition: border-color 0.15s;
+}
+.export-field input:focus { border-color: var(--blue-500); }
+.export-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+.btn-export {
+  padding: 7px 16px; background: var(--blue-600); border: none; border-radius: 6px;
+  color: white; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background 0.15s;
+}
+.btn-export:hover { background: var(--blue-700); }
+.btn-export.secondary { background: var(--gray-600); }
+.btn-export.secondary:hover { background: var(--gray-700); }
+.sample-btn {
+  font-size: 10px; color: var(--blue-600); font-weight: 500;
+  background: var(--blue-50); border: 1px solid var(--blue-100);
+  border-radius: 4px; padding: 2px 8px; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all 0.15s; white-space: nowrap;
+}
+.sample-btn:hover { background: var(--blue-100); border-color: var(--blue-300, #93c5fd); }
+
+/* ── Settings popover (v3.7.0) ── */
+.settings-popover {
+  display: none; position: fixed; top: 56px; right: 20px;
+  background: var(--white); border: 0.5px solid var(--gray-200); border-radius: 10px;
+  padding: 16px; width: 320px; box-shadow: var(--shadow-xl); z-index: 1000;
+  animation: slideDown 0.18s ease;
+}
+.settings-popover.open { display: block; }
+.settings-section { padding: 10px 0; }
+.settings-section + .settings-section { border-top: 0.5px solid var(--gray-200); }
+.settings-section label.stg-label {
+  display: block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--blue-700); margin-bottom: 6px;
+}
+.settings-section .stg-row {
+  display: flex; gap: 6px; align-items: center;
+}
+.settings-section .stg-row input[type=password] {
+  flex: 1; background: var(--white); border: 1px solid var(--gray-200);
+  border-radius: 6px; color: var(--gray-700); font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; padding: 4px 10px; outline: none; box-shadow: var(--shadow-sm);
+}
+.settings-section .stg-row input[type=password]:focus { border-color: var(--blue-500); }
+.stg-save-btn {
+  font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px;
+  background: var(--blue-600); color: white; border: none; cursor: pointer;
+  white-space: nowrap;
+}
+.stg-save-btn:hover { background: var(--blue-700); }
+.stg-chunked-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--gray-700); }
+.stg-chunked-row input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; }
+
+/* ── Analysis tab + dashboard (v3.7.0) ── */
+#rpane-analysis { display: none; flex-direction: column; overflow: hidden; }
+#rpane-analysis.active { display: flex; }
+.analysis-dashboard {
+  flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px;
+}
+.analysis-placeholder {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  color: var(--gray-400); font-size: 13px;
+}
+.analysis-pill-bar {
+  display: flex; gap: 3px; background: var(--gray-100); border-radius: 8px;
+  padding: 3px; flex-shrink: 0;
+}
+.analysis-pill {
+  padding: 5px 14px; font-size: 13px; border-radius: 6px; cursor: pointer;
+  color: var(--gray-600); background: transparent; border: none; font-family: inherit;
+  white-space: nowrap;
+}
+.analysis-pill.active {
+  background: var(--white); color: var(--gray-900); font-weight: 500;
+  border: 0.5px solid var(--gray-200);
+}
+.analysis-panel { display: none; flex-direction: column; gap: 14px; }
+.analysis-panel.active { display: flex; }
+.an-meta-grid {
+  display: grid; grid-template-columns: 140px 1fr; gap: 4px 12px;
+  font-size: 12px;
+}
+.an-meta-label { color: var(--gray-500); font-weight: 500; }
+.an-meta-value { color: var(--gray-800); }
+.an-meta-mono  { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--gray-600); }
+.an-coverage-wrap { display: flex; flex-direction: column; gap: 5px; }
+.an-coverage-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 500; color: var(--gray-700); }
+.an-badge-pass { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #E1F5EE; color: #085041; }
+.an-badge-fail { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #FEF3C7; color: #854F0B; }
+.an-coverage-bar-track { height: 8px; border-radius: 4px; background: var(--gray-200); overflow: hidden; }
+.an-coverage-bar-fill  { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+.an-coverage-footer { display: flex; justify-content: space-between; font-size: 11px; color: var(--gray-500); }
+.an-metric-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.an-metric-card { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px; text-align: center; }
+.an-metric-card-value { font-size: 22px; font-weight: 700; color: var(--blue-600); }
+.an-metric-card-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-500); margin-top: 2px; }
+.an-actor-bars { display: flex; flex-direction: column; gap: 6px; }
+.an-actor-row  { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.an-actor-name { width: 120px; flex-shrink: 0; color: var(--gray-700); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.an-actor-bar-track { flex: 1; height: 8px; background: var(--gray-200); border-radius: 4px; overflow: hidden; }
+.an-actor-bar-fill  { height: 100%; border-radius: 4px; }
+.an-actor-count { font-size: 11px; color: var(--gray-500); width: 28px; text-align: right; flex-shrink: 0; }
+.an-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--gray-500); margin-bottom: 4px; }
+.an-filter-pills { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.an-filter-pill { padding: 3px 10px; font-size: 11px; border-radius: 12px; cursor: pointer; border: 1px solid var(--gray-200); background: var(--white); color: var(--gray-600); font-family: inherit; }
+.an-filter-pill.active { background: var(--blue-600); color: white; border-color: var(--blue-600); }
+.an-entity-list { display: flex; flex-direction: column; gap: 2px; }
+.an-entity-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; background: var(--white); border: 1px solid var(--gray-100); }
+.an-entity-row:hover { background: var(--gray-50); }
+.an-entity-label { flex: 1; font-size: 12px; color: var(--gray-800); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.an-actor-pill { font-size: 10px; padding: 1px 6px; border-radius: 10px; background: var(--gray-100); color: var(--gray-600); white-space: nowrap; }
+.an-conf-bar-wrap { display: flex; align-items: center; gap: 4px; }
+.an-conf-bar-track { width: 48px; height: 4px; background: var(--gray-200); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+.an-conf-bar-fill  { height: 100%; border-radius: 2px; }
+.an-conf-label { font-size: 11px; color: var(--gray-400); width: 28px; flex-shrink: 0; }
+.an-provenance-box { padding: 8px 12px; margin: 2px 0 4px 0; background: var(--gray-50); border-left: 2px solid #0F6E56; border-radius: 0 6px 6px 0; font-size: 12px; font-style: italic; color: var(--gray-600); line-height: 1.5; }
+.an-actor-cards { display: flex; flex-direction: column; gap: 10px; }
+.an-actor-card { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 8px; padding: 14px; }
+.an-actor-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.an-actor-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.an-actor-card-name { font-size: 13px; font-weight: 500; color: var(--gray-900); flex: 1; }
+.an-actor-card-stat { font-size: 11px; color: var(--gray-500); }
+.an-actor-card-breakdown { font-size: 12px; color: var(--gray-500); margin-bottom: 8px; }
+.an-graveyard-list { display: flex; flex-direction: column; gap: 6px; }
+.an-graveyard-row { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 6px; padding: 8px 10px; }
+.an-graveyard-label { font-size: 12px; color: var(--gray-800); font-weight: 500; margin-bottom: 3px; display: flex; align-items: center; gap: 8px; }
+.an-reason-badge { font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 600; }
+.an-graveyard-sentence { font-size: 11px; color: var(--gray-500); font-style: italic; line-height: 1.4; }
+.an-token-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.an-token-card { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 8px; padding: 12px; }
+.an-token-card-title { font-size: 12px; font-weight: 500; color: var(--gray-700); margin-bottom: 8px; }
+.an-token-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--gray-600); padding: 2px 0; }
+.an-token-row span:last-child { font-weight: 500; color: var(--gray-800); }
+.an-token-divider { border: none; border-top: 0.5px solid var(--gray-200); margin: 8px 0; }
+.an-token-total { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 10px 12px; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 8px; }
+.an-token-total-label { color: var(--gray-600); }
+.an-token-total-value { font-weight: 500; color: var(--gray-900); }
+.an-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: var(--gray-400); font-size: 13px; text-align: center; gap: 10px; }
+
+/* ── Process Landscape Map (v3.10.0) ── */
+.an-map-wrap { display: flex; flex-direction: column; gap: 12px; }
+.an-map-meta { display: flex; gap: 16px; font-size: 12px; color: var(--gray-500); flex-wrap: wrap; }
+.an-map-meta strong { color: var(--gray-800); }
+.an-map-diagram { background: var(--white); border: 1px solid var(--gray-200); border-radius: 8px; padding: 12px; overflow: auto; min-height: 120px; }
+.an-map-diagram svg { max-width: none !important; }
+.an-map-legend { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; font-size: 11px; color: var(--gray-500); }
+.an-map-legend-item { display: flex; align-items: center; gap: 5px; }
+.an-map-legend-swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid; flex-shrink: 0; }
+.an-map-process-list { display: flex; flex-direction: column; gap: 8px; }
+.an-map-process-card { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px 12px; cursor: pointer; transition: border-color 0.15s; }
+.an-map-process-card:hover { border-color: var(--blue-300); }
+.an-map-process-card.active { border-color: var(--blue-500); background: var(--blue-50); }
+.an-map-process-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.an-map-process-title { font-size: 13px; font-weight: 500; color: var(--gray-900); }
+.an-map-process-badges { display: flex; gap: 4px; flex-wrap: wrap; }
+.an-map-badge { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px; }
+.an-map-process-steps { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+.an-map-step-chip { font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); cursor: pointer; }
+.an-map-step-chip.decision { background: #FAEEDA; color: #633806; border-color: #F6D5A8; }
+.an-map-step-chip.subprocess { background: #EEEDFE; color: #3C3489; border-color: #C8C6FC; }
+.an-map-generate-btn { font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 6px; background: var(--blue-600); color: white; border: none; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.an-map-generate-btn:hover { background: var(--blue-700); }
+.an-map-generate-btn:disabled { opacity: 0.5; cursor: default; }
+.coverage-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 5px; vertical-align: middle; }
+
+/* ── v3.12.0: Cluster card grid map ─────────────────────────────── */
+.cmap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 12px 0; }
+@media (max-width: 900px) { .cmap-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .cmap-grid { grid-template-columns: 1fr; } }
+.cmap-cluster {
+  border-radius: 12px; padding: 14px 14px 10px;
+  display: flex; flex-direction: column; gap: 6px;
+  border: 1.5px solid transparent;
+}
+.cmap-cluster-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+}
+.cmap-cluster-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: white; flex-shrink: 0;
+}
+.cmap-cluster-title { font-size: 13px; font-weight: 700; color: var(--gray-800); }
+.cmap-process {
+  background: rgba(255,255,255,0.72); border-radius: 7px;
+  padding: 7px 10px; cursor: pointer; transition: box-shadow 0.12s;
+  border: 1px solid rgba(0,0,0,0.07);
+}
+.cmap-process:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.13); }
+.cmap-process-title { font-size: 12px; font-weight: 500; color: var(--gray-800); }
+.cmap-chapter { font-size: 10px; color: var(--gray-500); margin-right: 5px; }
+.cmap-chips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+.cmap-chip {
+  font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 10px;
+  display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;
+}
+.cmap-legend {
+  display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 0 4px;
+  border-top: 1px solid var(--gray-200); margin-top: 4px;
+  font-size: 10px; color: var(--gray-600);
+}
+.cmap-legend-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  display: inline-block; margin-right: 4px; vertical-align: middle;
+}
+.rtab-analysis-disabled { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; }
+
+/* ── Keyboard shortcuts popup ── */
+#shortcuts-popup {
+  display: none; position: fixed; top: 56px; right: 20px;
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 10px;
+  padding: 16px 20px; width: 280px; box-shadow: var(--shadow-xl); z-index: 9999;
+  animation: slideDown 0.18s ease;
+}
+#shortcuts-popup h4 { font-size: 12px; font-weight: 700; color: var(--gray-900); margin-bottom: 12px; }
+.shortcut-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--gray-100); }
+.shortcut-row:last-child { border-bottom: none; }
+.shortcut-key { font-family: 'JetBrains Mono', monospace; font-size: 10px; background: var(--gray-100); border: 1px solid var(--gray-200); border-radius: 3px; padding: 2px 6px; color: var(--gray-700); }
+.shortcut-desc { font-size: 11px; color: var(--gray-600); }
+
+/* ── Auto-save indicator ── */
+#autosave-indicator {
+  font-size: 10px; color: var(--gray-400); font-weight: 500;
+  transition: color 0.3s;
+}
+#autosave-indicator.saved { color: var(--blue-400); }
+#diagram-suggestion {
+  display: none; padding: 6px 12px; background: var(--blue-50);
+  border: 1px solid var(--blue-200); border-radius: 6px; margin: 4px 8px 0;
+  font-size: 11px; color: var(--blue-700); font-weight: 500;
+  align-items: center; gap: 8px; flex-shrink: 0;
+}
+#diagram-suggestion.visible { display: flex; }
+.sug-apply {
+  margin-left: auto; padding: 3px 10px; background: var(--blue-600);
+  border: none; border-radius: 4px; color: white; font-size: 10px;
+  font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+}
+.sug-apply:hover { background: var(--blue-700); }
+
+/* ── Session history ── */
+.history-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 5px; background: var(--gray-50); }
+.hist-card {
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 7px;
+  padding: 9px 11px; display: flex; align-items: flex-start; gap: 9px;
+  transition: all 0.15s; box-shadow: var(--shadow-sm);
+}
+.hist-card:hover { border-color: #93c5fd; box-shadow: var(--shadow); }
+.hist-num {
+  width: 22px; height: 22px; border-radius: 5px; background: var(--blue-50);
+  border: 1px solid var(--blue-100); display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: var(--blue-600); flex-shrink: 0;
+}
+.hist-body { flex: 1; min-width: 0; }
+.hist-preview { font-size: 10.5px; font-family: 'JetBrains Mono', monospace; color: var(--gray-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; }
+.hist-meta { font-size: 10px; color: var(--gray-400); margin-top: 3px; }
+.hist-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 8px; }
+.hist-empty .d { font-size: 28px; opacity: 0.12; }
+.hist-empty p { font-size: 11px; color: var(--gray-400); font-weight: 500; max-width: 180px; text-align: center; }
+#chunk-progress {
+  display: none; padding: 10px 14px; background: var(--blue-50);
+  border: 1px solid var(--blue-100); border-radius: 7px; margin: 8px;
+  flex-direction: column; gap: 5px;
+}
+#chunk-progress-title { font-size: 11px; font-weight: 600; color: var(--blue-700); }
+#chunk-progress-bar-wrap { background: var(--blue-100); border-radius: 4px; height: 5px; overflow: hidden; }
+#chunk-progress-bar { height: 100%; background: var(--blue-500); border-radius: 4px; width: 0%; transition: width 0.3s; }
+#chunk-progress-status { font-size: 10px; color: var(--blue-600); font-weight: 500; }
+
+/* ── Share banner ── */
+#share-banner {
+  display: none; position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 8px;
+  padding: 14px 18px; width: 500px; box-shadow: var(--shadow-xl); z-index: 9999;
+  animation: slideDown 0.2s ease;
+}
+@keyframes slideDown { from { transform:translateX(-50%) translateY(-8px);opacity:0.7; } to { transform:translateX(-50%) translateY(0);opacity:1; } }
+#share-banner h4 { font-size: 12px; font-weight: 700; color: var(--gray-900); margin-bottom: 8px; }
+#share-url {
+  width: 100%; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 5px;
+  color: var(--gray-600); font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  padding: 6px 9px; outline: none; margin-bottom: 8px; cursor: text;
+}
+.share-btns { display: flex; gap: 7px; justify-content: flex-end; }
+
+/* ── Prompt editor (collapsible, above convert bar) ── */
+#prompt-editor-wrap {
+  border-top: 1px solid var(--gray-100); flex-shrink: 0; background: var(--gray-50);
+}
+#prompt-editor-toggle {
+  width: 100%; padding: 6px 14px; background: none; border: none;
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase; color: var(--gray-500);
+  cursor: pointer; transition: color 0.15s;
+}
+#prompt-editor-toggle:hover { color: var(--blue-600); }
+#prompt-editor-toggle .arrow { font-size: 9px; transition: transform 0.2s; }
+#prompt-editor-toggle.open .arrow { transform: rotate(180deg); }
+#prompt-editor-body {
+  display: none; padding: 0 12px 10px;
+}
+#prompt-editor-body.open { display: block; }
+#prompt-preview {
+  width: 100%; height: 110px; resize: vertical;
+  background: #1a1b26; color: #a9b1d6;
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px; line-height: 1.6;
+  border: 1px solid var(--gray-200); border-radius: 6px;
+  padding: 8px 10px; outline: none; margin-bottom: 6px;
+}
+#prompt-preview:focus { border-color: var(--blue-400); }
+.prompt-hint { font-size: 10px; color: var(--gray-400); }
+
+/* ── Diagram controls bar (v3.9.0) ── */
+#diagram-controls-bar {
+  display: none; flex-shrink: 0; padding: 6px 12px;
+  border-top: 1px solid var(--gray-100); background: var(--white);
+  align-items: center; gap: 0; flex-wrap: wrap;
+}
+#diagram-controls-bar.visible { display: flex; }
+.dc-group {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-right: 1px solid var(--gray-100);
+}
+.dc-group:last-child { border-right: none; }
+.dc-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--gray-400); white-space: nowrap;
+}
+.dc-btn {
+  font-size: 11px; padding: 3px 8px; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--gray-200); background: var(--white); color: var(--gray-700);
+  font-family: inherit; white-space: nowrap; transition: background 0.1s;
+}
+.dc-btn:hover { background: var(--gray-50); }
+.dc-btn.active { background: var(--blue-600); color: white; border-color: var(--blue-600); }
+.dc-btn.tier1 { border-color: var(--amber-200); color: var(--amber-700); }
+.dc-btn.tier1:hover { background: var(--amber-50); }
+.dc-actor-pill {
+  font-size: 11px; padding: 2px 8px; border-radius: 10px; cursor: pointer;
+  border: 1.5px solid; font-family: inherit; white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.dc-actor-pill.excluded { opacity: 0.35; }
+.dc-cost-hint { font-size: 10px; color: var(--amber-700); margin-left: 2px; }
+
+/* ── Refine bar (below graph) ── */
+#refine-bar {
+  display: none; padding: 8px 12px; border-top: 1px solid var(--gray-100);
+  background: var(--gray-50); flex-shrink: 0; gap: 7px; align-items: center;
+}
+#refine-bar.visible { display: flex; }
+#refine-input {
+  flex: 1; background: var(--white); border: 1px solid var(--gray-200); border-radius: 6px;
+  color: var(--gray-700); font-family: 'Inter', sans-serif; font-size: 12px;
+  padding: 6px 10px; outline: none; box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s;
+}
+#refine-input:focus { border-color: var(--blue-500); }
+#refine-input::placeholder { color: var(--gray-300); }
+.glossary-toolbar {
+  padding: 8px 12px; border-bottom: 1px solid var(--gray-100);
+  display: flex; align-items: center; gap: 7px; flex-shrink: 0; background: var(--gray-50);
+  flex-wrap: wrap;
+}
+.glossary-search {
+  flex: 1; min-width: 120px; background: var(--white);
+  border: 1px solid var(--gray-200); border-radius: 5px;
+  color: var(--gray-700); font-family: 'Inter', sans-serif; font-size: 11px;
+  padding: 4px 9px; outline: none; box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s;
+}
+.glossary-search:focus { border-color: var(--blue-500); }
+.glossary-filter {
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 5px;
+  color: var(--gray-600); font-family: 'Inter', sans-serif; font-size: 11px;
+  padding: 4px 7px; outline: none; cursor: pointer; box-shadow: var(--shadow-sm);
+}
+.glossary-list {
+  flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 4px;
+  background: var(--gray-50);
+}
+.glossary-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: 1; gap: 8px; padding: 20px; text-align: center;
+}
+.glossary-empty .icon { font-size: 28px; opacity: 0.2; }
+.glossary-empty p { font-size: 11px; color: var(--gray-400); font-weight: 500; max-width: 200px; }
+.glossary-row {
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 6px;
+  padding: 8px 10px; display: flex; align-items: flex-start; gap: 8px;
+  transition: all 0.15s; box-shadow: var(--shadow-sm);
+}
+.glossary-row:hover { border-color: #93c5fd; }
+.glossary-row.editing { border-color: var(--blue-400); box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+.g-term {
+  font-size: 12px; font-weight: 700; color: var(--gray-900);
+  font-family: 'JetBrains Mono', monospace; min-width: 70px; flex-shrink: 0; margin-top: 1px;
+}
+.g-body { flex: 1; min-width: 0; }
+.g-expansion { font-size: 11px; color: var(--gray-700); line-height: 1.4; }
+.g-tags { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.g-tag {
+  font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; border: 1px solid;
+}
+.g-tag.actor    { background: var(--blue-50);   color: var(--blue-600);   border-color: var(--blue-100); }
+.g-tag.status   { background: var(--amber-50);  color: var(--amber-700);  border-color: var(--amber-200); }
+.g-tag.system   { background: var(--purple-50); color: var(--purple-600); border-color: var(--purple-200); }
+.g-tag.step     { background: var(--green-50);  color: var(--green-600);  border-color: var(--green-200); }
+.g-tag.ref      { background: var(--gray-100);  color: var(--gray-600);   border-color: var(--gray-200); }
+.g-tag.domain   { background: var(--orange-50); color: var(--orange-600); border-color: var(--orange-200); }
+.g-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* Glossary add/edit form (inline, inside a card) */
+.g-form {
+  background: var(--white); border: 1px solid var(--blue-200); border-radius: 7px;
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.08);
+}
+.g-form-row { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.g-form-row label { font-size: 10px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+.g-input {
+  flex: 1; min-width: 80px; background: var(--white);
+  border: 1px solid var(--gray-200); border-radius: 5px;
+  color: var(--gray-900); font-family: 'Inter', sans-serif; font-size: 12px;
+  padding: 4px 8px; outline: none;
+  transition: border-color 0.15s;
+}
+.g-input:focus { border-color: var(--blue-500); }
+.g-input.mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; }
+.g-select {
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 5px;
+  color: var(--gray-700); font-family: 'Inter', sans-serif; font-size: 11px;
+  padding: 4px 7px; outline: none; cursor: pointer;
+}
+.g-form-btns { display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px; }
+
+/* Glossary tier tabs (Global / Project) */
+.g-tier-bar {
+  display: flex; align-items: center; gap: 0; padding: 8px 12px 0; background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200); flex-shrink: 0;
+}
+.g-tier-btn {
+  font-size: 11px; font-weight: 600; padding: 5px 13px; border: 1px solid var(--gray-200);
+  background: var(--white); color: var(--gray-500); cursor: pointer; transition: all 0.15s;
+  border-radius: 0; margin-right: -1px; position: relative;
+}
+.g-tier-btn:first-child { border-radius: 5px 0 0 5px; }
+.g-tier-btn:last-child  { border-radius: 0 5px 5px 0; margin-right: 0; }
+.g-tier-btn.active {
+  background: var(--blue-50); color: var(--blue-700); border-color: var(--blue-400);
+  z-index: 1;
+}
+.g-tier-label {
+  font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; margin-left: 5px;
+  vertical-align: middle;
+}
+.g-tier-label.global  { background: var(--blue-100);  color: var(--blue-700); }
+.g-tier-label.project { background: var(--green-100); color: var(--green-700); }
+.g-tag.global  { background: var(--blue-50);  color: var(--blue-700);  border-color: var(--blue-200); }
+.g-tag.project { background: var(--green-50); color: var(--green-700); border-color: var(--green-200); }
+
+/* Output glossary section */
+.output-glossary-section {
+  padding: 10px 12px; border-top: 1px solid var(--gray-100); background: var(--gray-50);
+}
+.output-glossary-section h4 {
+  font-size: 11px; font-weight: 700; color: var(--gray-700); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.og-template-list { display: flex; flex-direction: column; gap: 5px; }
+.og-template-row {
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 6px;
+  padding: 8px 10px; display: flex; align-items: flex-start; gap: 8px;
+  transition: border-color 0.15s; box-shadow: var(--shadow-sm);
+}
+.og-template-row:hover { border-color: #a7f3d0; }
+.og-proc-name { font-size: 11px; font-weight: 700; color: var(--gray-900); min-width: 130px; flex-shrink: 0; }
+.og-proc-body { flex: 1; font-size: 11px; color: var(--gray-600); line-height: 1.4; }
+.og-proc-tags { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 3px; }
+.og-tag { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; border: 1px solid; background: var(--green-50); color: var(--green-700); border-color: var(--green-200); }
+.og-empty { font-size: 11px; color: var(--gray-400); text-align: center; padding: 12px 0; }
+
+/* Mixed-case learned terms badge */
+.g-tag.mixed-learned { background: var(--purple-50,#f5f3ff); color: var(--purple-700,#6d28d9); border-color: var(--purple-200,#ddd6fe); }
+
+/* CodeMirror editor (v2.8.0) */
+#cm-editor-wrap { flex: 1; min-height: 0; overflow: auto; background: #282a36; }
+#cm-editor-wrap .CodeMirror {
+  height: 100%; min-height: 200px; font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; line-height: 1.7; background: #282a36; color: #f8f8f2;
+  border: none; border-radius: 0;
+}
+#cm-editor-wrap .CodeMirror-scroll { padding-bottom: 20px; }
+#cm-editor-wrap .CodeMirror-cursor { border-left-color: #f8f8f2; }
+#cm-editor-wrap .CodeMirror-selected { background: rgba(255,255,255,0.15); }
+/* Mermaid keyword colouring via CodeMirror simple mode */
+.cm-keyword  { color: #ff79c6 !important; font-weight: 700; }
+.cm-builtin  { color: #8be9fd !important; }
+.cm-string   { color: #f1fa8c !important; }
+.cm-comment  { color: #6272a4 !important; font-style: italic; }
+.cm-atom     { color: #bd93f9 !important; }
+.cm-operator { color: #ff79c6 !important; }
+.cm-number   { color: #bd93f9 !important; }
+.cm-variable { color: #50fa7b !important; }
+.cm-error    { background: rgba(255,85,85,0.25); }
+
+/* Learn banner — appears after successful conversion */
+#learn-banner {
+  display: none; position: fixed; bottom: 24px; right: 24px;
+  background: var(--white); border: 1px solid var(--blue-200);
+  border-left: 4px solid var(--blue-500);
+  border-radius: 10px; padding: 16px 18px; width: 330px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.18); z-index: 9999;
+  animation: slideUp 0.25s ease;
+}
+#learn-banner h4 { font-size: 12px; font-weight: 700; color: var(--gray-900); margin-bottom: 6px; }
+#learn-banner p  { font-size: 11px; color: var(--gray-500); margin-bottom: 10px; line-height: 1.5; }
+.learn-terms { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.learn-term-row { display: flex; align-items: center; gap: 7px; }
+.learn-term-row input[type=checkbox] { width: 13px; height: 13px; cursor: pointer; flex-shrink: 0; }
+.learn-term-label { font-size: 11px; color: var(--gray-700); font-family: 'JetBrains Mono', monospace; }
+.learn-term-exp { font-size: 11px; color: var(--gray-400); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.learn-banner-btns { display: flex; gap: 7px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="logo">⟳</div>
+  <div class="brand">
+    <h1>Flowchart Converter</h1>
+    <p>Documents → Pipeline → Visual Charts</p>
+  </div>
+  <div class="hdiv"></div>
+  <span class="badge">Mermaid + Claude AI</span>
+  <button class="sample-btn" onclick="loadSampleDocument()" title="Load a sample iGaming CS document to try the tool">⚡ Try Sample</button>
+  <span id="autosave-indicator" style="margin-left:4px;"></span>
+  <button onclick="toggleSettingsPopover()" title="Settings — API key, GitHub PAT, options" id="settings-gear-btn" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--gray-400);padding:0 4px;line-height:1;width:28px;height:28px;display:flex;align-items:center;justify-content:center;">⚙</button>
+  <span class="version-badge" id="header-version-badge">v4.0.0</span>
+  <button onclick="switchRightTab('logic')" title="Logic — pre-parse tag definitions and intelligence flags" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--gray-400);padding:0 4px;font-family:'Inter',sans-serif;font-weight:500;white-space:nowrap;">📊 Logic</button>
+  <button onclick="toggleShortcuts()" title="Keyboard shortcuts" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--gray-400);padding:0 4px;line-height:1;">?</button>
+</header>
+
+<!-- Settings popover (v3.7.0) -->
+<div class="settings-popover" id="settings-popover">
+  <div class="settings-section">
+    <label class="stg-label">Anthropic API key</label>
+    <div class="stg-row">
+      <input type="password" id="apikey" placeholder="sk-ant-..." autocomplete="off">
+      <button class="stg-save-btn" id="stg-apikey-save" onclick="stgSaveApiKey()">Save</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <label class="stg-label">GitHub personal access token</label>
+    <div class="stg-row">
+      <input type="password" id="gh-pat" placeholder="github_pat_..." autocomplete="off" style="font-family:'JetBrains Mono',monospace;">
+      <button class="stg-save-btn" id="stg-pat-save" onclick="stgSavePAT()">Save</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <label class="stg-label">Chunked mode</label>
+    <div class="stg-chunked-row">
+      <input type="checkbox" id="chunked-mode" onchange="updatePreflight()">
+      <span>Convert each chunk separately and merge</span>
+    </div>
+  </div>
+</div>
+
+<!-- Keyboard shortcuts popup -->
+<div id="shortcuts-popup">
+  <h4>⌨ Keyboard Shortcuts</h4>
+  <div class="shortcut-row"><span class="shortcut-desc">Run &amp; Generate</span><span class="shortcut-key" id="sk-run">⌘↵</span></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Render from editor</span><span class="shortcut-key" id="sk-render">⌘R</span></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Save chart</span><span class="shortcut-key" id="sk-save">⌘S</span></div>
+  <div class="shortcut-row"><span class="shortcut-desc">Close popup</span><span class="shortcut-key">Esc</span></div>
+</div>
+<script>
+// Show Ctrl instead of ⌘ on non-Mac
+(function() {
+  var isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform || '');
+  var mod = isMac ? '⌘' : 'Ctrl+';
+  ['sk-run','sk-render','sk-save'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = el.textContent.replace('⌘', mod);
+  });
+})();
+</script>
+
+<!-- ── Config Bar ── -->
+<div id="apibar">
+  <label>Model</label>
+  <select id="model-select" onchange="updatePreflight(); updateThinkingIndicator();">
+    <option value="claude-haiku-4-5-20251001">Haiku 4.5 — Fast</option>
+    <option value="claude-sonnet-4-6">Sonnet 4.6 — Better</option>
+  </select>
+  <span id="thinking-indicator" style="display:none;font-size:10px;color:var(--blue-400);font-weight:600;white-space:nowrap;">🧠 thinking</span>
+  <label>Output</label>
+  <select id="diagram-type" onchange="onDiagramTypeChange()">
+    <option value="flowchart">Flowchart</option>
+    <option value="swimlane">Swim Lane</option>
+    <option value="sequence">Sequence</option>
+  </select>
+  <span id="lane-orient-wrap" style="display:none;" title="Diagram orientation">
+    <select id="lane-orient" onchange="updatePreflight()" style="background:var(--white);border:1px solid var(--gray-200);color:var(--gray-700);border-radius:6px;padding:4px 6px;font-size:13px;cursor:pointer;">
+      <option value="TD">Top → Bottom</option>
+      <option value="LR">Left → Right</option>
+    </select>
+  </span>
+  <span title="Layout engine — ELK handles complex graphs better for large diagrams; Dagre is default">
+    <select id="layout-engine" onchange="onLayoutEngineChange()" style="background:var(--white);border:1px solid var(--gray-200);color:var(--gray-700);border-radius:6px;padding:4px 6px;font-size:13px;cursor:pointer;">
+      <option value="dagre" selected>Dagre</option>
+      <option value="elk">ELK (beta)</option>
+    </select>
+  </span>
+  <label>Domain</label>
+  <select id="domain-preset" onchange="onDomainChange()">
+    <option value="igaming">iGaming CS</option>
+    <option value="generic">Generic Business</option>
+    <option value="banking">Banking / Finance</option>
+    <option value="healthcare">Healthcare</option>
+    <option value="ecommerce">E-commerce</option>
+  </select>
+  <div class="hdiv"></div>
+  <label>Project</label>
+  <select id="gh-project" onchange="onProjectChange()" style="max-width:160px;background:var(--white);border:1px solid var(--gray-200);border-radius:6px;color:var(--gray-700);font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:4px 8px;outline:none;cursor:pointer;box-shadow:var(--shadow-sm);">
+    <option value="">— No project —</option>
+  </select>
+  <button class="btn-xs" id="gh-sync-btn" onclick="githubSync()" title="Sync with GitHub" style="display:none;">⇅ Sync</button>
+  <span id="gh-status" style="font-size:10px;color:var(--gray-400);font-weight:500;white-space:nowrap;"></span>
+  <span id="api-status" style="font-size:11px;color:var(--gray-500);white-space:nowrap;"></span>
+</div>
+
+<!-- ── Two-Column Layout ── -->
+<div class="main-grid">
+
+  <!-- ══ LEFT: Pipeline Inspector ══ -->
+  <div class="panel">
+    <div class="tab-bar">
+      <div class="tab-bar-tabs">
+        <button class="tab-btn active" onclick="switchLeftTab('raw')"      id="ltab-raw">
+          <span class="pipe-dot" id="pd-raw"></span> Raw
+        </button>
+        <button class="tab-btn" onclick="switchLeftTab('clean')"    id="ltab-clean">
+          <span class="pipe-dot" id="pd-clean"></span> Cleaned
+        </button>
+        <button class="tab-btn" onclick="switchLeftTab('chunks')"   id="ltab-chunks">
+          <span class="pipe-dot" id="pd-chunks"></span> Chunks
+        </button>
+        <button class="tab-btn" onclick="switchLeftTab('preparse')" id="ltab-preparse">
+          <span class="pipe-dot" id="pd-preparse"></span> Pre-Parse
+        </button>
+        <button class="tab-btn" onclick="switchLeftTab('analysis')" id="ltab-analysis">
+          <span class="pipe-dot" id="pd-analysis"></span> Analysis
+        </button>
+      </div>
+      <div class="tab-bar-actions">
+        <button class="btn-xs" onclick="document.getElementById('fileinput').click()" title="Load a new file (replaces current document)">↑ Load</button>
+        <input type="file" id="fileinput" accept=".txt,.md,.pdf,.docx" style="display:none" onchange="handleFileSelect(event)">
+        <button class="btn-xs" style="background:var(--blue-50);border-color:var(--blue-300);color:var(--blue-700);font-weight:600;" onclick="document.getElementById('tocinput').click()" title="Load a Table of Contents file — sets up cluster structure without consuming content as extractable text">↑ TOC</button>
+        <input type="file" id="tocinput" accept=".txt,.md,.pdf,.docx" style="display:none" onchange="handleTocSelect(event)">
+        <button class="btn-xs" id="append-btn" onclick="document.getElementById('appendinput').click()" title="Append another file to the current document (e.g. add a chapter to a TOC)">↑ Append</button>
+        <input type="file" id="appendinput" accept=".txt,.md,.pdf,.docx" style="display:none" onchange="handleAppendSelect(event)">
+        <button class="btn-xs" onclick="clearAll()">Clear</button>
+      </div>
+    </div>
+
+    <!-- ① Raw Text -->
+    <div class="tab-pane active" id="lpane-raw">
+      <div class="stage-header">
+        <span class="stage-label">① Raw Import</span>
+        <div class="header-right">
+          <span id="filename-tag">📄 <span id="fname"></span></span>
+          <span class="stage-meta" id="raw-meta">0 chars</span>
+        </div>
+      </div>
+      <!-- v3.12.1: TOC detection banner — shown when a TOC structure is detected on load -->
+      <div id="toc-banner" style="display:none;background:var(--blue-50);border-bottom:1px solid var(--blue-100);padding:8px 12px;flex-shrink:0;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:11px;font-weight:700;color:var(--blue-700);margin-bottom:4px;">
+              📋 TOC detected — <span id="toc-banner-count"></span>
+            </div>
+            <div id="toc-banner-clusters" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;"></div>
+            <div style="font-size:10px;color:var(--blue-600);">
+              Use <strong>↑ Append</strong> to add a chapter, then <strong>→ Generate Chart</strong>.
+              Pass 1 will receive only the chapter — the TOC is isolated.
+            </div>
+          </div>
+          <button onclick="_dismissTocBanner()" title="Dismiss" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--blue-400);padding:0 2px;flex-shrink:0;line-height:1;">✕</button>
+        </div>
+      </div>
+      <div class="input-wrapper">
+        <div id="drop-hint"><div class="drop-icon">📂</div><p>Drop file to load</p></div>
+        <textarea id="input-text"
+          placeholder="Paste plain-English document text here — SOPs, policies, process descriptions.
+↑ Load or ↑ Append to import TXT · MD · PDF · DOCX files.
+
+⚠ This is for SOURCE DOCUMENTS only — not Mermaid code.
+   To render Mermaid syntax directly → use the Code tab on the right.
+
+Then click ▶ Run Pipeline + Generate, or:
+  1. ▶ Pipeline — pre-processes text (clean, chunk, pre-parse)
+  2. ⊕ 2-Pass — enables smarter extraction (recommended)
+  3. → Generate Chart — converts to diagram
+
+Or use ⚡ Try Sample to see a full example."></textarea>
+      </div>
+    </div>
+
+    <!-- ② Cleaned -->
+    <div class="tab-pane" id="lpane-clean">
+      <div class="stage-header">
+        <span class="stage-label">② Cleaned Text</span>
+        <div class="header-right">
+          <span class="stage-meta" id="clean-meta">—</span>
+          <button class="btn-xs" id="btn-copy-clean" onclick="copyToClipboard(pipe.clean)" style="display:none">⎘ Copy</button>
+        </div>
+      </div>
+      <div class="pipeline-pane">
+        <div class="pipe-empty" id="clean-empty"><div class="icon">✦</div><p>Run pipeline to see cleaned text</p></div>
+        <div class="pipeline-viewer" id="clean-viewer" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- ③ Chunks -->
+    <div class="tab-pane" id="lpane-chunks">
+      <div class="stage-header">
+        <span class="stage-label">③ Text Chunks</span>
+        <div class="header-right">
+          <span class="stage-meta" id="chunks-meta">—</span>
+        </div>
+      </div>
+      <div class="pipeline-pane">
+        <div class="pipe-empty" id="chunks-empty"><div class="icon">⊞</div><p>Run pipeline to see chunks</p></div>
+        <div class="chunk-list" id="chunk-list" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- ④ Pre-Parse -->
+    <div class="tab-pane" id="lpane-preparse">
+      <div class="stage-header">
+        <span class="stage-label">④ Pre-Parse</span>
+
+        <div class="header-right">
+          <span class="stage-meta" id="preparse-meta">—</span>
+          <button class="btn-xs" id="btn-copy-preparse" onclick="copyToClipboard(pipe.preparsed ? pipe.preparsed.map(function(p){return '['+p.type.toUpperCase()+'] '+p.text;}).join('\n') : '')" style="display:none">⎘ Copy</button>
+          <button class="btn-xs" id="btn-export-preparse-csv"   onclick="exportPreParseCsv()"   style="display:none" title="Download as CSV — open in Excel or Google Sheets">↓ CSV</button>
+          <button class="btn-xs" id="btn-export-preparse-print" onclick="exportPreParsePrint()" style="display:none" title="Open printable HTML review sheet in new tab">⎙ Print</button>
+        </div>
+      </div>
+      <div class="pipeline-pane">
+        <div class="pipe-empty" id="preparse-empty"><div class="icon">⊙</div><p>Run pipeline to see pre-parsed structure</p></div>
+        <div id="preparse-content" style="display:none; flex:1; flex-direction:column; overflow:hidden;">
+          <!-- Legend -->
+          <div class="pp-legend">
+            <span style="font-size:10px;font-weight:600;color:var(--gray-500);margin-right:4px;">Tags:</span>
+            <span class="pp-legend-item"><span class="pp-tag heading"    style="font-size:8px;">HEAD</span> Heading</span>
+            <span class="pp-legend-item"><span class="pp-tag process"    style="font-size:8px;">PROC</span> Process</span>
+            <span class="pp-legend-item"><span class="pp-tag subprocess" style="font-size:8px;">SUBP</span> Sub-process</span>
+            <span class="pp-legend-item"><span class="pp-tag step"       style="font-size:8px;">STEP</span> Step</span>
+            <span class="pp-legend-item"><span class="pp-tag decision"   style="font-size:8px;">DCSN</span> Decision</span>
+            <span class="pp-legend-item"><span class="pp-tag condition"  style="font-size:8px;">COND</span> Condition</span>
+            <span class="pp-legend-item"><span class="pp-tag outcome"    style="font-size:8px;">OUT</span> Outcome</span>
+            <span class="pp-legend-item"><span class="pp-tag policy"     style="font-size:8px;">POL</span> Policy</span>
+            <span class="pp-legend-item"><span class="pp-tag cluster"    style="font-size:8px;">CLUS</span> Cluster</span>
+            <span class="pp-legend-item"><span class="pp-tag status"     style="font-size:8px;">STAT</span> Status</span>
+            <span class="pp-legend-item"><span class="pp-tag actor"      style="font-size:8px;">ACTR</span> Actor</span>
+            <span class="pp-legend-item"><span class="pp-tag note"       style="font-size:8px;">NOTE</span> Note</span>
+          </div>
+          <div class="preparse-list" id="preparse-list"></div>
+
+          <!-- ── Pipeline Diff (v3.1.0) ── -->
+          <div class="pipe-diff-section" id="pipe-diff-section" style="display:none;">
+            <div class="pipe-diff-toggle" id="pipe-diff-toggle" onclick="togglePipeDiff()">
+              <span>⊙</span>
+              <span>Intelligence pipeline diff</span>
+              <span id="pipe-diff-summary" style="font-size:9px;color:#9ca3af;font-weight:400;text-transform:none;letter-spacing:0;"></span>
+              <span class="pd-arrow">▶</span>
+            </div>
+            <div class="pipe-diff-body" id="pipe-diff-body">
+              <div id="pipe-diff-rows"></div>
+            </div>
+          </div>
+
+          <!-- ── Graveyard (v3.1.0) ── -->
+          <div class="graveyard-section" id="graveyard-section" style="display:none;">
+            <div class="graveyard-toggle" id="graveyard-toggle" onclick="toggleGraveyard()">
+              <span>🪦</span>
+              <span>Filtered items</span>
+              <span id="graveyard-counts" style="font-size:9px;color:#9ca3af;font-weight:400;text-transform:none;letter-spacing:0;"></span>
+              <span class="gy-arrow">▶</span>
+            </div>
+            <div class="graveyard-body" id="graveyard-body">
+              <div class="graveyard-meta" id="graveyard-meta"></div>
+              <div id="graveyard-list"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ Analysis -->
+    <div class="tab-pane" id="lpane-analysis">
+      <div class="stage-header">
+        <span class="stage-label">⑤ Analysis</span>
+        <div class="header-right">
+          <span class="stage-meta" id="analysis-meta">—</span>
+        </div>
+      </div>
+      <div class="pipeline-pane">
+        <div class="pipe-empty" id="analysis-empty"><div class="icon">◎</div><p>Run pipeline to see analysis</p></div>
+        <div class="analysis-scroll" id="analysis-content" style="display:none">
+          <div class="analysis-section">
+            <div class="analysis-title">Detected Actors / Roles</div>
+            <div class="actor-pills" id="actor-pills"></div>
+            <p style="font-size:10px;color:var(--gray-400);margin-top:7px;">Grouped by domain synonyms · hover for detected term · click to include/exclude</p>
+          </div>
+          <div class="analysis-section">
+            <div class="analysis-title">Process Keywords</div>
+            <div class="keyword-list" id="keyword-list"></div>
+          </div>
+          <div class="analysis-section">
+            <div class="analysis-title">Document Stats</div>
+            <div class="doc-stats" id="doc-stats"></div>
+          </div>
+          <div class="analysis-section">
+            <div class="analysis-title">Swim Lane / Sequence Preview</div>
+            <div class="swimlane-preview" id="swimlane-preview">(Select actors above to preview)</div>
+          </div>
+          <!-- Two-pass entity summary (v2.5.0) — shown after Pass 1 extraction -->
+          <div class="analysis-section" id="entity-summary" style="display:none;padding:10px 12px;background:var(--blue-50);border-top:1px solid var(--blue-100);"></div>
+          <!-- Pass 1 step editor (v3.2.0) — shown after Pass 1 when 2-Pass is on -->
+          <div class="analysis-section" id="pass1-editor-section" style="display:none;">
+            <div class="analysis-title" style="display:flex;align-items:center;justify-content:space-between;">
+              <span>⊕ Pass 1 Step Editor</span>
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span id="pass1-step-count" style="font-size:9px;color:var(--gray-400);"></span>
+                <button class="btn-xs" onclick="pass1SelectAll(true)"  title="Select all steps">All</button>
+                <button class="btn-xs" onclick="pass1SelectAll(false)" title="Deselect all steps">None</button>
+                <button class="btn-xs" style="background:var(--blue-600);color:white;border-color:var(--blue-700);" onclick="pass1RunPass2()" id="btn-pass1-rerun" title="Re-run Pass 2 with selected steps">▶ Run Pass 2</button>
+              </div>
+            </div>
+            <p style="font-size:10px;color:var(--gray-400);margin:4px 0 8px 0;">Review and prune the steps Claude extracted. Uncheck items you don't want in the diagram, then click ▶ Run Pass 2.</p>
+            <div id="pass1-step-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diagram type suggestion (shown after pipeline analysis) -->
+    <div id="diagram-suggestion"></div>
+
+    <!-- Prompt editor (collapsible) -->
+    <div id="prompt-editor-wrap">
+      <button id="prompt-editor-toggle" onclick="togglePromptEditor()">
+        <span>⚙ Prompt Editor</span>
+        <span class="arrow">▼</span>
+      </button>
+      <div id="prompt-editor-body">
+        <textarea id="prompt-preview" placeholder="Prompt will appear here when you expand — edit before generating…"></textarea>
+        <div class="prompt-hint">Edit the prompt above before clicking Generate Chart. Changes apply to the next generation only.</div>
+      </div>
+    </div>
+
+    <!-- Pre-flight cost estimate bar (shown after pipeline, before generate) -->
+    <div id="preflight-bar">
+      <span class="pf-item"><span class="pf-label">Model:</span> <span class="pf-val" id="pf-model">—</span></span>
+      <span class="pf-item"><span class="pf-label">Est. input:</span> <span class="pf-val" id="pf-tokens">—</span> tokens</span>
+      <span class="pf-item"><span class="pf-label">API calls:</span> <span class="pf-val" id="pf-calls">—</span></span>
+      <span class="pf-item"><span class="pf-label">Est. cost:</span> <span class="pf-val" id="pf-cost">—</span></span>
+      <span class="pf-item" id="pf-twopass-badge" style="display:none"><span style="font-size:9px;background:var(--blue-100);color:var(--blue-700);border-radius:3px;padding:1px 5px;font-weight:700;">2-PASS ON</span></span>
+      <span class="pf-spacer"></span>
+      <a href="https://www.anthropic.com/pricing" target="_blank" style="color:var(--amber-700);font-size:10px;">Pricing ↗</a>
+    </div>
+
+    <!-- Unified action bar -->
+    <div class="convert-bar">
+      <div id="pipeline-status" style="font-size:10px;color:rgba(255,255,255,0.6);font-weight:500;flex-shrink:0;white-space:nowrap;"></div>
+      <button id="pipeline-only-btn" onclick="runPipelineOnly()"
+        title="Pipeline Only — Clean → Chunk → Pre-Parse → Analyse (no API call). Use to inspect structure before sending to Claude.">⚙ Pipeline Only</button>
+      <button id="quick-chart-btn" onclick="generateRuleBased()"
+        title="Quick Chart — instant diagram from pipeline tags using rule-based layout. No API call, no token cost."
+        style="padding:6px 10px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:7px;color:var(--white);font-family:'Inter',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap;flex-shrink:0;">⚡ Quick Chart</button>
+      <button id="two-pass-btn" onclick="toggleTwoPass()"
+        title="Two-Pass Mode — Pass 1: Claude extracts structured entities. Pass 2: Claude builds the diagram. Best quality, 2× API calls."
+        style="padding:6px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);border-radius:7px;color:rgba(255,255,255,0.6);font-family:'Inter',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap;flex-shrink:0;">⊕ Two-Pass</button>
+      <!-- Detail level selector (v3.2.0) — controls Pass 1 step count + Pass 2 node cap -->
+      <div id="detail-level-wrap" style="display:none;flex-shrink:0;">
+        <div class="detail-level-wrap" style="margin-bottom:0;padding:4px 8px;">
+          <span class="detail-level-label">Detail:</span>
+          <button class="detail-level-btn" onclick="setDetailLevel('summary')"  id="dl-summary"  title="Summary: ~10 steps, high-level overview">S</button>
+          <button class="detail-level-btn active" onclick="setDetailLevel('standard')" id="dl-standard" title="Standard: ~20 steps (default)">M</button>
+          <button class="detail-level-btn" onclick="setDetailLevel('detailed')" id="dl-detailed" title="Detailed: ~30 steps, full procedure">L</button>
+        </div>
+      </div>
+      <button id="convert-btn" onclick="smartAction()" title="Run Pipeline + Generate — runs all pipeline stages then calls Claude to generate the diagram (⌘↵ / Ctrl+Enter)">
+        ▶ Run &amp; Generate
+      </button>
+      <span id="session-cost" title="Estimated Claude API spend this session">$0.0000</span>
+    </div>
+  </div>
+
+  <!-- ══ RIGHT: Output Panel ══ -->
+  <div class="panel">
+    <div class="tab-bar">
+      <!-- Row 1: tab buttons (horizontally scrollable if needed) -->
+      <div class="tab-bar-tabs">
+        <button class="tab-btn active" onclick="switchRightTab('code')"     id="rtab-code">Code</button>
+        <button class="tab-btn"        onclick="switchRightTab('graph')"    id="rtab-graph">Graph</button>
+        <button class="tab-btn" onclick="switchRightTab('analysis')" id="rtab-analysis" data-tab="analysis">Analysis</button>
+        <button class="tab-btn"        onclick="switchRightTab('saved')"    id="rtab-saved">Saved</button>
+        <button class="tab-btn"        onclick="switchRightTab('history')"  id="rtab-history">History</button>
+        <button class="tab-btn"        onclick="switchRightTab('glossary')" id="rtab-glossary">Glossary</button>
+      </div>
+      <!-- Row 2: context-sensitive action buttons -->
+      <div class="tab-bar-actions">
+        <!-- Code tab actions -->
+        <button class="btn-xs"         id="action-load"   onclick="document.getElementById('mermaid-fileinput').click()">↑ Load</button>
+        <input type="file" id="mermaid-fileinput" accept=".mmd,.txt" style="display:none" onchange="loadMermaidFile(event)">
+        <button class="btn-xs"         id="action-clear"  onclick="clearEditor()">Clear</button>
+        <button class="btn-xs primary" id="action-render" onclick="renderFromEditor()">▶ Render</button>
+        <!-- Graph tab actions: Save | Export▾ | Share | Split -->
+        <button class="btn-xs primary" id="action-save"   style="display:none" onclick="openSaveDialog()">◈ Save</button>
+        <div style="position:relative;display:inline-block;" id="action-export-wrap">
+          <button class="btn-xs" id="action-export-btn" style="display:none"
+                  onclick="_toggleExportMenu()" title="Export options">↓ Export ▾</button>
+          <div id="action-export-menu" style="display:none;position:absolute;right:0;top:100%;margin-top:2px;background:var(--white);border:1px solid var(--gray-200);border-radius:6px;box-shadow:var(--shadow-lg);z-index:200;min-width:172px;padding:4px 0;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--gray-400);padding:5px 12px 2px;">This diagram</div>
+            <button onclick="exportMMD();_toggleExportMenu()"             class="exp-item">↓ Mermaid (.mmd)</button>
+            <button onclick="_exportCurrentHtml();_toggleExportMenu()"    class="exp-item">↗ Standalone HTML</button>
+            <button onclick="openExportDialog();_toggleExportMenu()"      class="exp-item">↓ SVG / PNG</button>
+            <button onclick="printChart();_toggleExportMenu()"            class="exp-item">⎙ Print / PDF</button>
+            <div style="height:1px;background:var(--gray-100);margin:4px 0;"></div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--gray-400);padding:5px 12px 2px;">Whole project</div>
+            <button onclick="_exportProjectMapHtml();_toggleExportMenu()" class="exp-item">⊙ Project map HTML</button>
+            <button onclick="_exportAllHtml();_toggleExportMenu()"        class="exp-item" style="color:var(--blue-700);font-weight:600;">⇩ Export all HTML</button>
+          </div>
+        </div>
+        <button class="btn-xs" id="action-share" style="display:none" onclick="shareViaURL()" title="Share via URL">⇗ Share</button>
+        <button class="btn-xs" id="split-toggle" style="display:none" onclick="toggleSplitView()" title="Split view">⊟ Split</button>
+        <!-- hidden compat stubs for legacy show/hide calls -->
+        <button id="action-mmd"            style="display:none" onclick="exportMMD()"></button>
+        <button id="action-export"         style="display:none" onclick="openExportDialog()"></button>
+        <button id="action-print"          style="display:none" onclick="printChart()"></button>
+        <button id="action-export-html"    style="display:none" onclick="_exportCurrentHtml()"></button>
+        <button id="action-export-html-map"style="display:none" onclick="_exportProjectMapHtml()"></button>
+        <button id="action-overflow-btn"   style="display:none"></button>
+      </div>
+    </div>
+    <div class="tab-pane active" id="rpane-code">
+      <!-- CodeMirror editor container (v2.8.0). Hidden textarea kept for read/write compat. -->
+      <div id="cm-editor-wrap" style="flex:1;min-height:0;overflow:auto;"></div>
+      <textarea id="mermaid-editor" style="display:none;" oninput="scheduleRender()"
+        placeholder="Mermaid diagram code appears here after generation.
+
+✏ You can also paste or type Mermaid syntax directly here, then press Ctrl+R or click ▶ Render:
+
+flowchart TD
+  A((&quot;Start&quot;)) --> B[&quot;Step one&quot;]
+  B --> C{&quot;Decision?&quot;}
+  C -->|Yes| D[&quot;Do this&quot;]
+  C -->|No| E[&quot;Do that&quot;]
+  D --> F((&quot;End&quot;))
+  E --> F"></textarea>
+    </div>
+
+    <div class="tab-pane" id="rpane-graph">
+      <!-- Chunked conversion progress (shown during multi-chunk generation) -->
+      <div id="chunk-progress">
+        <div id="chunk-progress-title">Converting chunks…</div>
+        <div id="chunk-progress-bar-wrap"><div id="chunk-progress-bar"></div></div>
+        <div id="chunk-progress-status">Preparing…</div>
+      </div>
+      <div class="viewer-area">
+        <div id="error-box" style="display:none;"></div>
+        <div id="render-error" style="display:none;"></div>
+        <div id="spinner"><div class="ring"></div><p id="spinner-msg">Converting…</p></div>
+        <div id="placeholder" style="display:flex;">
+          <div class="d">◻</div>
+          <p>Generate or render a chart to see it here</p>
+        </div>
+        <div id="graph-controls">
+          <div class="zoom-controls">
+            <button class="btn-xs" onclick="adjustZoom(-0.5)" title="Zoom out (large step)">−−</button>
+            <button class="btn-xs" onclick="adjustZoom(-0.2)" title="Zoom out">−</button>
+            <span id="zoom-level">100%</span>
+            <button class="btn-xs" onclick="adjustZoom(0.2)" title="Zoom in">+</button>
+            <button class="btn-xs" onclick="adjustZoom(0.5)" title="Zoom in (large step)">++</button>
+            <button class="btn-xs" onclick="resetZoom()" title="Reset zoom and position">↺</button>
+            <button class="btn-xs" onclick="fitToView()" title="Fit diagram to viewport">⊡ Fit</button>
+            <button class="btn-xs" onclick="openDiagramFullscreen()" title="Open diagram in new tab at full resolution — best for large diagrams">↗ Full</button>
+          </div>
+          <div id="chart-viewport" style="position:relative;">
+            <div id="node-edit-overlay">
+              <input id="node-edit-input" type="text">
+              <div id="node-edit-hint">Enter to save · Esc to cancel</div>
+            </div>
+            <div id="chart-inner"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Diagram controls bar (v3.9.0) — instant re-render (Tier 0) + rebuild (Tier 1) -->
+      <div id="diagram-controls-bar">
+        <!-- All controls are Tier 0: instant re-render from pipe.graph, zero API calls -->
+        <div class="dc-group">
+          <span class="dc-label">Type</span>
+          <button class="dc-btn" id="dc-dtype-flowchart" onclick="dcSetDtype('flowchart')" title="Flowchart layout">Flow</button>
+          <button class="dc-btn" id="dc-dtype-swimlane"  onclick="dcSetDtype('swimlane')"  title="Swimlane layout">Swim</button>
+        </div>
+        <div class="dc-group">
+          <span class="dc-label">Layout</span>
+          <button class="dc-btn" id="dc-orient-td" onclick="dcSetOrient('TD')" title="Top → Bottom">TD</button>
+          <button class="dc-btn" id="dc-orient-lr" onclick="dcSetOrient('LR')" title="Left → Right">LR</button>
+        </div>
+        <div class="dc-group">
+          <span class="dc-label">Colours</span>
+          <button class="dc-btn active" id="dc-colors-on"  onclick="dcSetColors(true)"  title="Node colours on">On</button>
+          <button class="dc-btn"        id="dc-colors-off" onclick="dcSetColors(false)" title="Node colours off">Off</button>
+        </div>
+        <div class="dc-group">
+          <span class="dc-label">Cluster bg</span>
+          <button class="dc-btn active" id="dc-cluster-on"  onclick="dcSetCluster(true)"  title="Show subgraph background shading">On</button>
+          <button class="dc-btn"        id="dc-cluster-off" onclick="dcSetCluster(false)" title="Hide subgraph background shading">Off</button>
+        </div>
+        <div class="dc-group">
+          <span class="dc-label">Edge labels</span>
+          <button class="dc-btn active" id="dc-edgelbl-on"  onclick="dcSetEdgeLabels(true)"  title="Show edge labels (Yes/No, handoffs)">On</button>
+          <button class="dc-btn"        id="dc-edgelbl-off" onclick="dcSetEdgeLabels(false)" title="Hide edge labels">Off</button>
+        </div>
+        <div class="dc-group">
+          <span class="dc-label">Spacing</span>
+          <button class="dc-btn active" id="dc-spacing-normal"  onclick="dcSetSpacing('normal')"  title="Normal spacing">N</button>
+          <button class="dc-btn"        id="dc-spacing-compact" onclick="dcSetSpacing('compact')" title="Compact spacing">C</button>
+          <button class="dc-btn"        id="dc-spacing-dense"   onclick="dcSetSpacing('dense')"   title="Dense — maximum nodes visible">D</button>
+        </div>
+        <div class="dc-group">
+          <span class="dc-label">Curve</span>
+          <button class="dc-btn active" id="dc-curve-basis"  onclick="dcSetCurve('basis')"  title="Smooth bezier curves">~</button>
+          <button class="dc-btn"        id="dc-curve-linear" onclick="dcSetCurve('linear')" title="Straight lines">╱</button>
+          <button class="dc-btn"        id="dc-curve-step"   onclick="dcSetCurve('step')"   title="Right-angle routing">⌐</button>
+        </div>
+        <div class="dc-group">
+          <span class="dc-label">Notes</span>
+          <button class="dc-btn active" id="dc-notes-show" onclick="dcSetNotes(true)"  title="Show note nodes">Show</button>
+          <button class="dc-btn"        id="dc-notes-hide" onclick="dcSetNotes(false)" title="Hide note nodes">Hide</button>
+        </div>
+        <div class="dc-group">
+          <span class="dc-label">Filter</span>
+          <button class="dc-btn active" id="dc-filter-all"  onclick="dcSetFilter('all')"       title="Show all nodes">All</button>
+          <button class="dc-btn"        id="dc-filter-decs" onclick="dcSetFilter('decisions')"  title="Decisions + connected nodes only">Dec</button>
+          <button class="dc-btn"        id="dc-filter-key"  onclick="dcSetFilter('steps')"      title="Steps + decisions only (no notes/outcomes)">Steps</button>
+        </div>
+        <!-- Tier 1: actor include/exclude — needs pipe.extraction, triggers Pass 2 rebuild -->
+        <div class="dc-group" id="dc-actors-group" style="display:none;">
+          <span class="dc-label">Actors <span class="dc-cost-hint" title="Changing actors triggers a Pass 2 rebuild (~3-8s)">⚡</span></span>
+          <div id="dc-actor-pills" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+          <button class="dc-btn tier1" id="dc-apply-actors" onclick="dcApplyActors()" title="Rebuild diagram with selected actors (~1 API call)">↺ Apply</button>
+        </div>
+      </div>
+      <!-- Refine bar -->
+      <div id="refine-bar">
+        <input id="refine-input" placeholder='Refine: e.g. "add a rejection path after KYC step"' onkeydown="if(event.key==='Enter')refineChart()">
+        <button class="btn-xs primary" onclick="refineChart()">↺ Refine</button>
+      </div>
+      <!-- Validation warnings -->
+      <div class="validation-bar" id="validation-bar"></div>
+    </div>
+
+    <div class="tab-pane" id="rpane-history">
+      <div class="history-list" id="history-list"></div>
+    </div>
+
+    <!-- ⊙ Analysis tab (v3.7.0) -->
+    <div class="tab-pane" id="rpane-analysis">
+      <div id="analysis-dashboard-root" style="flex:1;overflow:hidden;display:flex;flex-direction:column;"></div>
+    </div>
+
+    <!-- 📊 Logic tab -->
+    <div class="tab-pane" id="rpane-logic">
+      <div class="logic-pane">
+
+        <!-- Section 1: Pipeline overview -->
+        <div class="logic-section">
+          <div class="logic-section-title">
+            Pipeline stages
+            <span class="logic-version-badge" id="logic-version-badge"></span>
+          </div>
+          <div class="logic-stages">
+            <div class="logic-stage">
+              <div class="logic-stage-box s1">① Raw import</div>
+              <div class="logic-stage-sub">PDF.js · mammoth · txt/md</div>
+            </div>
+            <div class="logic-stage-arrow">→</div>
+            <div class="logic-stage">
+              <div class="logic-stage-box s2">② Clean</div>
+              <div class="logic-stage-sub">strip noise, fix breaks</div>
+            </div>
+            <div class="logic-stage-arrow">→</div>
+            <div class="logic-stage">
+              <div class="logic-stage-box s3">③ Chunk</div>
+              <div class="logic-stage-sub">~600 token sections</div>
+            </div>
+            <div class="logic-stage-arrow">→</div>
+            <div class="logic-stage">
+              <div class="logic-stage-box s4">④ Pre-parse</div>
+              <div class="logic-stage-sub">tag every sentence</div>
+            </div>
+            <div class="logic-stage-arrow">→</div>
+            <div class="logic-stage">
+              <div class="logic-stage-box s5">⑤ Analyse</div>
+              <div class="logic-stage-sub">actors, scale, suggest</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Tag classification table (generated from JS constants) -->
+        <div class="logic-section">
+          <div class="logic-section-title">Tag classification rules <span style="font-weight:400;color:var(--gray-400);font-size:9px;letter-spacing:0;">(priority order — first match wins)</span></div>
+          <table class="logic-tag-table" id="logic-tag-table">
+            <thead>
+              <tr>
+                <th style="width:44px;">#</th>
+                <th style="width:60px;">Tag</th>
+                <th>Trigger patterns</th>
+                <th style="width:120px;">Mermaid output</th>
+              </tr>
+            </thead>
+            <tbody id="logic-tag-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Section 3: Clean-stage rules -->
+        <div class="logic-section">
+          <div class="logic-section-title">Clean stage rules</div>
+          <table class="logic-tag-table">
+            <thead><tr><th>Rule</th><th>What it does</th></tr></thead>
+            <tbody>
+              <tr><td><code style="font-size:10px;">\\r\\n → \\n</code></td><td>Normalise line endings (Windows → Unix)</td></tr>
+              <tr><td><code style="font-size:10px;">-\\n[a-z] → join</code></td><td>Re-join hyphenated word breaks from PDF extraction</td></tr>
+              <tr><td><code style="font-size:10px;">\\n{3,} → \\n\\n</code></td><td>Collapse 3+ blank lines to max 2</td></tr>
+              <tr><td><code style="font-size:10px;">[non-printable]</code></td><td>Strip control characters and encoding artefacts</td></tr>
+              <tr><td><code style="font-size:10px;">\\t → 2 spaces</code></td><td>Normalise tab indentation</td></tr>
+              <tr><td><code style="font-size:10px;">trailing whitespace</code></td><td>Trim end of every line</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Section 4: Node scaling -->
+        <div class="logic-section">
+          <div class="logic-section-title">Node count auto-scaling</div>
+          <table class="logic-tag-table">
+            <thead><tr><th>Formula</th><th>Range</th></tr></thead>
+            <tbody>
+              <tr><td>( STEP + DCSN + PROC ) × 0.65</td><td>Clamp: min 5 — max 30</td></tr>
+              <tr><td>Chunked mode per-chunk limit</td><td>Total ÷ number of chunks</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Section 5: Live document snapshot — filled by renderLogicSnapshot() after pipeline -->
+        <div class="logic-section">
+          <div class="logic-section-title">Current document snapshot
+            <span id="logic-snap-status" style="font-size:9px;color:var(--gray-400);font-weight:400;letter-spacing:0;">run pipeline to populate</span>
+          </div>
+          <div id="logic-snapshot-area">
+            <div class="logic-snap-empty">Run the pipeline on a document to see tag distribution here</div>
+          </div>
+        </div>
+
+        <!-- Section 5b: Token reduction log (v4.0.0) -->
+        <div class="logic-section" id="logic-token-log" style="display:none;">
+          <div class="logic-section-title">API token usage — this session
+            <span style="font-weight:400;color:var(--gray-400);font-size:9px;letter-spacing:0;">Before vs After token-offloading savings</span>
+          </div>
+          <div id="logic-token-log-content"></div>
+        </div>
+
+        <!-- Section 6: Intelligence layers (v3.1.0) -->
+        <div class="logic-section">
+          <div class="logic-section-title">Intelligence layers
+            <span style="font-weight:400;color:var(--gray-400);font-size:9px;letter-spacing:0;">toggle to enable/disable — pipeline reruns immediately</span>
+          </div>
+          <div class="intel-flag-grid" id="intel-flag-grid">
+            <!-- rendered by renderIntelFlagsPanel() -->
+          </div>
+        </div>
+
+        <!-- Section 7: Version changelog — rendered from CHANGELOG constant -->
+        <div class="logic-section">
+          <div class="logic-section-title">Version changelog</div>
+          <div id="logic-changelog"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="tab-pane" id="rpane-saved">
+      <div id="saved-list" class="saved-list"></div>
+    </div>
+
+    <!-- Glossary tab -->
+    <div class="tab-pane" id="rpane-glossary">
+      <!-- Tier selector: Global | Project | Output -->
+      <div class="g-tier-bar">
+        <button class="g-tier-btn active" id="gtier-global"  onclick="switchGlossaryTier('global')">Global <span class="g-tier-label global" id="gtier-global-count">0</span></button>
+        <button class="g-tier-btn"        id="gtier-project" onclick="switchGlossaryTier('project')">Project <span class="g-tier-label project" id="gtier-project-count">0</span></button>
+        <button class="g-tier-btn"        id="gtier-output"  onclick="switchGlossaryTier('output')">Output Templates <span class="g-tier-label global" id="gtier-output-count">0</span></button>
+      </div>
+      <!-- Global + Project glossary toolbar (shared) -->
+      <div class="glossary-toolbar" id="g-toolbar-terms">
+        <input class="glossary-search" id="g-search" placeholder="Search terms…" oninput="renderGlossary()">
+        <select class="glossary-filter" id="g-filter-type" onchange="renderGlossary()">
+          <option value="">All types</option>
+          <option value="actor">Actor / Role</option>
+          <option value="process">Process</option>
+          <option value="subprocess">Sub-Process</option>
+          <option value="policy">Policy / Rule</option>
+          <option value="cluster">Cluster / Group</option>
+          <option value="status">Status</option>
+          <option value="system">System</option>
+          <option value="step">Step / Action</option>
+          <option value="ref">Reference</option>
+        </select>
+        <select class="glossary-filter" id="g-filter-domain" onchange="renderGlossary()">
+          <option value="">All domains</option>
+          <option value="all">Global</option>
+          <option value="igaming">iGaming</option>
+          <option value="generic">Generic</option>
+          <option value="banking">Banking</option>
+          <option value="healthcare">Healthcare</option>
+          <option value="ecommerce">E-commerce</option>
+        </select>
+        <button class="btn-xs primary" onclick="showAddForm()">+ Add Term</button>
+        <button class="btn-xs" onclick="exportGlossary()" title="Download as JSON">↓ JSON</button>
+        <button class="btn-xs" onclick="document.getElementById('g-import-file').click()" title="Import JSON">↑ Import</button>
+        <input type="file" id="g-import-file" accept=".json" style="display:none" onchange="importGlossary(event)">
+      </div>
+      <div id="g-add-form-container"></div>
+      <div class="glossary-list" id="glossary-list"></div>
+      <!-- Output Templates panel (hidden by default) -->
+      <div id="g-panel-output" style="display:none; flex:1; overflow-y:auto; background:var(--gray-50);">
+        <div class="output-glossary-section">
+          <h4>⚙ Output Templates <span style="font-size:10px;font-weight:400;color:var(--gray-400);">Canonical node sequences for known process types</span></h4>
+          <div style="display:flex;gap:7px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+            <input class="glossary-search" id="og-search" placeholder="Search templates…" oninput="renderOutputGlossary()" style="max-width:160px;">
+            <button class="btn-xs primary" onclick="showAddOutputTemplate()">+ Add Template</button>
+            <button class="btn-xs" onclick="exportOutputGlossary()" title="Download as JSON">↓ JSON</button>
+            <button class="btn-xs" onclick="document.getElementById('og-import-file').click()" title="Import JSON">↑ Import</button>
+            <input type="file" id="og-import-file" accept=".json" style="display:none" onchange="importOutputGlossary(event)">
+          </div>
+          <div id="og-add-form-container"></div>
+          <div class="og-template-list" id="og-template-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Split View Overlay — appears over the right panel when active -->
+<div id="split-overlay" style="display:none; position:fixed; top:0; right:0; bottom:0; width:50%; background:var(--white); border-left:2px solid var(--blue-300, #93c5fd); z-index:50; flex-direction:column;">
+  <div style="display:flex; align-items:center; gap:8px; padding:7px 12px; background:var(--blue-50); border-bottom:1px solid var(--blue-100); flex-shrink:0; position:relative;">
+    <span style="font-size:10px; font-weight:700; letter-spacing:0.07em; color:var(--blue-600); text-transform:uppercase;">⊟ Panel B</span>
+    <button class="btn-xs" onclick="loadChartIntoB()" title="Load a saved chart into Panel B">↑ Load Chart</button>
+    <!-- Inline chart picker (replaces browser prompt) -->
+    <div id="chart-b-picker" style="display:none; position:absolute; top:36px; left:0; z-index:200; background:var(--white); border:1px solid var(--blue-200); border-radius:8px; box-shadow:var(--shadow-lg); min-width:220px; max-width:320px; max-height:260px; overflow-y:auto; padding:6px 0;">
+      <div style="padding:5px 12px 4px; font-size:10px; font-weight:700; color:var(--gray-500); text-transform:uppercase; letter-spacing:0.06em;">Select chart for Panel B</div>
+      <div id="chart-b-picker-list"></div>
+    </div>
+    <button class="btn-xs primary" onclick="renderPanelB()">▶ Render</button>
+    <button class="btn-xs" onclick="adjustZoomB(-0.2)">−</button>
+    <span id="zoom-level-b" style="font-size:11px;color:var(--gray-600);font-weight:600;min-width:36px;text-align:center;">100%</span>
+    <button class="btn-xs" onclick="adjustZoomB(0.2)">+</button>
+    <button class="btn-xs" onclick="resetZoomB()">↺</button>
+    <button class="btn-xs danger" onclick="toggleSplitView()" style="margin-left:auto;">✕ Close</button>
+  </div>
+  <textarea id="mermaid-editor-b" oninput="scheduledRenderB()"
+    style="flex:0 0 140px; background:#1a1b26; border:none; outline:none; color:#9ece6a; font-family:'JetBrains Mono',monospace; font-size:11px; line-height:1.7; padding:10px 14px; resize:none;"
+    placeholder="Paste or load Mermaid code here for Panel B…"></textarea>
+  <div style="flex:1; overflow:auto; border-radius:0; border:none; background:var(--white); position:relative;">
+    <div id="chart-inner-b" style="transform-origin:top left; transition:transform 0.2s; padding:20px; display:inline-block; min-width:100%; min-height:100%;"></div>
+  </div>
+  <div id="split-placeholder-b" style="position:absolute; inset:180px 0 0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; pointer-events:none;">
+    <div style="font-size:32px; opacity:0.1;">◻</div>
+    <p style="font-size:11px; color:var(--gray-400); font-weight:500;">Load a chart or paste Mermaid code above</p>
+  </div>
+</div>
+
+<!-- Project confirm dialog -->
+<div id="project-dialog" style="display:none; position:fixed; inset:0; background:rgba(17,24,39,0.45); z-index:100; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
+  <div class="dialog-box">
+    <div class="dialog-title">Create / Select Project</div>
+    <div class="dialog-sub" id="project-dialog-sub">A project was detected from your document. Confirm or edit the name.</div>
+    <input type="text" id="project-name-input" class="dialog-input" placeholder="e.g. KYC Verification" maxlength="60">
+    <div class="dialog-btns">
+      <button class="btn-cancel" onclick="closeProjectDialog()">Skip</button>
+      <button class="btn-save-confirm" onclick="confirmProject()">Use This Project</button>
+    </div>
+  </div>
+</div>
+<div id="learn-banner">
+  <h4>📖 New terms found — add to glossary?</h4>
+  <p>These terms appeared in your document but aren't in your glossary yet. Select any to add.</p>
+  <div class="learn-terms" id="learn-terms-list"></div>
+  <div class="learn-banner-btns">
+    <button class="btn-cancel" onclick="dismissLearnBanner()">Skip</button>
+    <button class="btn-save-confirm" onclick="addLearnedTerms()">Add Selected</button>
+  </div>
+</div>
+
+<!-- Save Dialog -->
+<div id="save-dialog">
+  <div class="dialog-box">
+    <div class="dialog-title">Save Chart</div>
+    <div class="dialog-sub">Give this flowchart a name to find it later</div>
+    <input type="text" id="chart-name-input" class="dialog-input" placeholder="e.g. KYC Verification Flow" maxlength="60">
+    <!-- v3.11.2: subprocess parent picker — shown only when type is detected as subprocess -->
+    <div id="save-subprocess-row" style="display:none;margin-bottom:14px;">
+      <label style="font-size:11px;font-weight:600;color:var(--amber-700);display:block;margin-bottom:4px;">
+        ⚑ Sub-process detected — select parent process
+        <span style="font-weight:400;color:var(--gray-500);"> (required for navigation)</span>
+      </label>
+      <select id="save-parent-slug-select" style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--amber-300);border-radius:5px;background:var(--amber-50);color:var(--gray-800);font-family:inherit;">
+        <option value="">— none / set later —</option>
+      </select>
+      <label style="font-size:11px;color:var(--gray-500);display:flex;align-items:center;gap:5px;margin-top:5px;">
+        <input type="checkbox" id="save-type-override" onchange="_onSaveTypeOverride(this)">
+        This is actually a top-level process (override subprocess detection)
+      </label>
+    </div>
+    <div class="dialog-btns">
+      <button class="btn-cancel" onclick="closeSaveDialog()">Cancel</button>
+      <button class="btn-save-confirm" onclick="confirmSave()">Save Chart</button>
+    </div>
+  </div>
+</div>
+<!-- Share banner -->
+<div id="share-banner">
+  <h4>⇗ Share this chart</h4>
+  <input id="share-url" readonly onclick="this.select()">
+  <div class="share-btns">
+    <button class="btn-cancel" onclick="document.getElementById('share-banner').style.display='none'">Close</button>
+    <button class="btn-save-confirm" onclick="copyShareURL()">⎘ Copy Link</button>
+  </div>
+</div>
+
+<!-- Export dialog -->
+<div id="export-dialog">
+  <div class="export-box">
+    <h3>↓ Export Chart</h3>
+    <div class="export-field">
+      <label>Title</label>
+      <input type="text" id="exp-title" placeholder="e.g. Withdrawal Process — 5Gringos CS" maxlength="80">
+    </div>
+    <div class="export-field">
+      <label>Subtitle / Version</label>
+      <input type="text" id="exp-subtitle" placeholder="e.g. v1.2 · April 2026 · Internal" maxlength="80">
+    </div>
+    <div class="export-field">
+      <label>Format</label>
+      <select id="exp-format">
+        <option value="svg">SVG (vector, scalable)</option>
+        <option value="png">PNG @ 3× (high-DPI raster)</option>
+        <option value="both">Both SVG + PNG</option>
+      </select>
+    </div>
+    <div class="export-actions">
+      <button class="btn-cancel" onclick="closeExportDialog()">Cancel</button>
+      <button class="btn-export secondary" onclick="exportWithMeta(true)">Preview</button>
+      <button class="btn-export" onclick="exportWithMeta(false)">Download</button>
+    </div>
+  </div>
+</div>
+
+<!-- Print area (only visible during print) -->
+<div id="print-area">
+  <h2 id="print-title"></h2>
+  <div class="print-meta" id="print-meta"></div>
+  <div id="print-svg"></div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     Flowchart Converter v4.0 — Modular JS
+     Modules are loaded in dependency order:
+       storage.js  → pipeline.js → render.js → generate.js → ui.js
+     ══════════════════════════════════════════════════════════════════ -->
+<script src="js/storage.js"></script>
+<script src="js/pipeline.js"></script>
+<script src="js/render.js"></script>
+<script src="js/generate.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
