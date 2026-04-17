@@ -281,8 +281,8 @@ async function smartAction() {
     return;
   }
   if (!hasApiKey) {
-    showToast('Enter your Anthropic API key in the bar above');
-    document.getElementById('apikey').focus();
+    showToast('Add your Anthropic API key in ⚙ Settings (top right)');
+    document.getElementById('settings-gear-btn') && document.getElementById('settings-gear-btn').click();
     return;
   }
   if (!hasPipeline) {
@@ -328,9 +328,9 @@ async function convert() {
   // v3.11.3: use chapter-only text when available (set by ↑ Append).
   // This prevents TOC content from contaminating Pass 1.
   // Fallback: pipe.clean (full combined text) — used for Load-only runs.
-  var text = (pipe._chapterText || pipe.clean || inputEl.value).trim();
+  var text = (pipe._chapterText || pipe.clean || pipe.raw || (document.getElementById('input-text') || {}).value || '').trim();
   if (!text)   { showError('Load or paste a document first.'); return; }
-  if (!apiKey) { showError('Enter your Anthropic API key above.'); return; }
+  if (!apiKey) { showError('Add your Anthropic API key in ⚙ Settings (top right).'); return; }
 
   showError('');
   switchRightTab('graph');
