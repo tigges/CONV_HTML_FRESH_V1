@@ -2290,8 +2290,10 @@ function stgSaveApiKey() {
   var val = (document.getElementById('apikey') || {}).value || '';
   if (val.trim()) {
     localStorage.setItem('fc_apikey', val.trim());
+    _stgSetIndicator('stg-apikey-indicator', true);
   } else {
     localStorage.removeItem('fc_apikey');
+    _stgSetIndicator('stg-apikey-indicator', false);
   }
   var btn = document.getElementById('stg-apikey-save');
   if (btn) { btn.textContent = 'Saved ✓'; setTimeout(function(){ btn.textContent = 'Save'; }, 2000); }
@@ -2300,14 +2302,27 @@ function stgSaveApiKey() {
 function stgSavePAT() {
   var val = (document.getElementById('gh-pat') || {}).value || '';
   if (val.trim()) {
+    localStorage.setItem('fc_ghpat_persist', val.trim()); // persist across sessions
     sessionStorage.setItem('fc_ghpat', val.trim());
+    _stgSetIndicator('stg-pat-indicator', true);
     var syncBtn = document.getElementById('gh-sync-btn');
     if (syncBtn) syncBtn.style.display = '';
   } else {
+    localStorage.removeItem('fc_ghpat_persist');
     sessionStorage.removeItem('fc_ghpat');
+    _stgSetIndicator('stg-pat-indicator', false);
   }
   var btn = document.getElementById('stg-pat-save');
   if (btn) { btn.textContent = 'Saved ✓'; setTimeout(function(){ btn.textContent = 'Save'; }, 2000); }
+}
+
+function _stgSetIndicator(id, saved) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = saved ? '✓ Saved' : '';
+  el.style.color = 'var(--green-600)';
+  el.style.fontSize = '10px';
+  el.style.fontWeight = '600';
 }
 
 // ── v3.7.0: Analysis dashboard ───────────────────────────────────
@@ -4526,12 +4541,15 @@ _pruneDrafts(); // remove localStorage drafts older than 24 hours
   if (savedKey) {
     var inp = document.getElementById('apikey');
     if (inp) inp.value = savedKey;
+    _stgSetIndicator('stg-apikey-indicator', true);
   }
-  // GitHub PAT — sessionStorage (not persisted across browser restarts)
-  var savedPAT = sessionStorage.getItem('fc_ghpat');
+  // GitHub PAT — try persistent localStorage first, fall back to sessionStorage
+  var savedPAT = localStorage.getItem('fc_ghpat_persist') || sessionStorage.getItem('fc_ghpat');
   if (savedPAT) {
     var patInp = document.getElementById('gh-pat');
     if (patInp) patInp.value = savedPAT;
+    sessionStorage.setItem('fc_ghpat', savedPAT); // keep session in sync
+    _stgSetIndicator('stg-pat-indicator', true);
     var syncBtn = document.getElementById('gh-sync-btn');
     if (syncBtn) syncBtn.style.display = '';
   }

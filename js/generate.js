@@ -272,7 +272,8 @@ function buildRuleBasedSequence(items, actors) {
 async function smartAction() {
   var hasText = document.getElementById('input-text').value.trim().length > 0;
   var hasPipeline = pipe.preparsed && pipe.preparsed.length > 0;
-  var hasApiKey = document.getElementById('apikey').value.trim().length > 0;
+  var hasApiKey = (document.getElementById('apikey').value.trim()
+               || localStorage.getItem('fc_apikey') || '').length > 0;
 
   if (!hasText) {
     showToast('Load or paste a document first — then click the button');
@@ -318,7 +319,8 @@ function updatePipelineStatus(done, msg) {
 
 // ── AI Convert (with chunked mode) ───────────────────────────────
 async function convert() {
-  var apiKey  = document.getElementById('apikey').value.trim();
+  var apiKey  = (document.getElementById('apikey').value || '').trim()
+             || localStorage.getItem('fc_apikey') || '';
   var model   = document.getElementById('model-select').value;
   var dtype   = document.getElementById('diagram-type').value;
   var chunked = document.getElementById('chunked-mode').checked;
@@ -2054,8 +2056,9 @@ async function refineChart() {
   if (!instruction) { showToast('Type a refinement instruction first'); return; }
   var currentCode = document.getElementById('mermaid-editor').value.trim();
   if (!currentCode) { showToast('No chart to refine — generate one first'); return; }
-  var apiKey = document.getElementById('apikey').value.trim();
-  if (!apiKey) { showError('Enter your Anthropic API key above.'); return; }
+  var apiKey = (document.getElementById('apikey').value || '').trim()
+            || localStorage.getItem('fc_apikey') || '';
+  if (!apiKey) { showError('Enter your Anthropic API key in ⚙ Settings.'); return; }
 
   var model = document.getElementById('model-select').value;
   showError('');

@@ -1307,18 +1307,20 @@ header {
 <!-- Settings popover (v3.7.0) -->
 <div class="settings-popover" id="settings-popover">
   <div class="settings-section">
-    <label class="stg-label">Anthropic API key</label>
+    <label class="stg-label">Anthropic API key <span id="stg-apikey-indicator" style="color:var(--green-600);font-size:10px;font-weight:600;"></span></label>
     <div class="stg-row">
       <input type="password" id="apikey" placeholder="sk-ant-..." autocomplete="off">
       <button class="stg-save-btn" id="stg-apikey-save" onclick="stgSaveApiKey()">Save</button>
     </div>
+    <div style="font-size:10px;color:var(--gray-400);margin-top:4px;">Get yours at <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue-600);">console.anthropic.com</a></div>
   </div>
   <div class="settings-section">
-    <label class="stg-label">GitHub personal access token</label>
+    <label class="stg-label">GitHub PAT (optional) <span id="stg-pat-indicator" style="color:var(--green-600);font-size:10px;font-weight:600;"></span></label>
     <div class="stg-row">
       <input type="password" id="gh-pat" placeholder="github_pat_..." autocomplete="off" style="font-family:'JetBrains Mono',monospace;">
       <button class="stg-save-btn" id="stg-pat-save" onclick="stgSavePAT()">Save</button>
     </div>
+    <div style="font-size:10px;color:var(--gray-400);margin-top:4px;">Only needed to sync saved diagrams to GitHub. Leave blank to use local storage only.</div>
   </div>
   <div class="settings-section">
     <label class="stg-label">Chunked mode</label>
