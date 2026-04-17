@@ -433,8 +433,18 @@ function onDiagramTypeChange() {
 
 // ── Pipeline: Run all 5 stages ────────────────────────────────────
 async function runPipeline() {
-  const rawText = document.getElementById('input-text').value;
-  if (!rawText.trim()) { showToast('Paste or load a document first'); return; }
+  var rawText = document.getElementById('input-text').value;
+  console.log('[pipeline] start — textarea chars:', rawText.length, '| pipe.raw chars:', (pipe.raw||'').length);
+  if (!rawText.trim()) {
+    // Fallback: textarea empty but pipe.raw has content — restore it
+    if (pipe.raw && pipe.raw.trim()) {
+      document.getElementById('input-text').value = pipe.raw;
+      rawText = pipe.raw;
+      console.log('[pipeline] restored textarea from pipe.raw, chars:', rawText.length);
+    } else {
+      showToast('Paste or load a document first'); return;
+    }
+  }
 
   var btn = document.getElementById('convert-btn');
   btn.disabled = true;

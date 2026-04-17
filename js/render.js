@@ -187,41 +187,24 @@ async function handleFile(file, append) {
   }
   showError('');
 
-  // v3.11.0: compute SHA-256 hash of raw file bytes for DocumentRegistry
-  var _fileHash = null;
-  try {
-    var _rawBytes = await file.arrayBuffer();
-    _fileHash = await computeFileHash(_rawBytes);
-  } catch(e) { /* non-fatal */ }
-
   if (!append) {
-    // Load mode: replace everything, reset pipeline
     document.getElementById('fname').textContent = file.name;
     document.getElementById('filename-tag').style.display = 'inline-block';
     resetPipelineStages();
     setPipeDot('raw', 'running');
-    // Reset chart name tracking so new file always gets a fresh suggestion
     _chartNameSource = '';
     var inp = document.getElementById('chart-name-input');
     if (inp) inp.value = '';
-    // Suggest title from filename
     _suggestTitleFromFilename(file.name, false);
-    // Infer chapter from filename for ChapterRegistry
     ChapterRegistry.inferFromFilename(file.name);
-    // v3.11.3: reset context isolation fields (preserve _isTocLoad if set by ↑ TOC button)
     pipe._tocText = null; pipe._chapterText = null; pipe._inputSources = [];
     if (!pipe._isTocLoad) {
       var tocBannerReset = document.getElementById('toc-banner');
       if (tocBannerReset) tocBannerReset.style.display = 'none';
     }
   } else {
-    // Append mode: add to existing text, keep pipeline state
     showToast('Appending "' + file.name + '" to current document…');
-    // A chapter file appended after a TOC should override the TOC-derived name
-    // (system → system upgrade is always allowed)
-    if (_chartNameSource !== 'user') {
-      _chartNameSource = ''; // allow the chapter filename to replace the TOC suggestion
-    }
+    if (_chartNameSource !== 'user') _chartNameSource = '';
     _suggestTitleFromFilename(file.name, true);
   }
 
@@ -229,10 +212,12 @@ async function handleFile(file, append) {
     var text = '';
 
     if (ext === 'txt' || ext === 'md') {
+      // Read text FIRST — arrayBuffer() before text() can exhaust the stream
       text = await file.text();
 
     } else if (ext === 'pdf') {
-      var pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      var pdfData = await file.arrayBuffer();
+      var pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
       var pages = [];
       for (var i = 1; i <= pdf.numPages; i++) {
         var pg = await pdf.getPage(i);
@@ -252,16 +237,30 @@ async function handleFile(file, append) {
       if (!text) throw new Error('No extractable text — PDF may be image-based.');
 
     } else if (ext === 'docx') {
-      // Use HTML conversion to preserve document structure
-      var htmlResult = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+      var docxData = await file.arrayBuffer();
+      var htmlResult = await mammoth.convertToHtml({ arrayBuffer: docxData });
       text = convertDocxHtmlToText(htmlResult.value).trim();
       if (!text) {
-        // Fallback to raw text if HTML conversion yields nothing
-        var rawResult = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+        var rawResult = await mammoth.extractRawText({ arrayBuffer: docxData });
         text = rawResult.value.trim();
       }
       if (!text) throw new Error('Could not extract text from DOCX.');
     }
+
+    console.log('[handleFile] extracted chars:', text.length, 'from', file.name);
+
+    if (!text.trim()) {
+      showError('File appears to be empty or unreadable: ' + file.name);
+      setPipeDot('raw', '');
+      return;
+    }
+
+    // Hash from text (avoids re-reading the file stream)
+    var _fileHash = null;
+    try {
+      var _textBytes = new TextEncoder().encode(text);
+      _fileHash = await computeFileHash(_textBytes.buffer);
+    } catch(e) { /* non-fatal */ }
 
     // Show text in raw tab first, then auto-run pipeline
     var _inputEl = document.getElementById('input-text');
@@ -303,6 +302,7 @@ async function handleFile(file, append) {
       document.getElementById('filename-tag').style.display = 'inline-block';
       if (_inputEl) _inputEl.value = text;
       pipe.raw = text;
+      console.log('[handleFile] set textarea value, chars:', text.length);
     }
     document.getElementById('raw-meta').textContent = (pipe._chapterText || pipe.raw).length.toLocaleString() + ' chars';
     setPipeDot('raw', 'done');
