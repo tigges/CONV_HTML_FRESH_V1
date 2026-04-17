@@ -187,9 +187,11 @@ async function handleFile(file, append) {
   }
   showError('');
 
+  // Show filename immediately so user sees something happened
+  document.getElementById('fname').textContent = file.name;
+  document.getElementById('filename-tag').style.display = 'inline-block';
+
   if (!append) {
-    document.getElementById('fname').textContent = file.name;
-    document.getElementById('filename-tag').style.display = 'inline-block';
     resetPipelineStages();
     setPipeDot('raw', 'running');
     _chartNameSource = '';
@@ -203,138 +205,111 @@ async function handleFile(file, append) {
       if (tocBannerReset) tocBannerReset.style.display = 'none';
     }
   } else {
-    showToast('Appending "' + file.name + '" to current document…');
+    showToast('Appending "' + file.name + '"…');
     if (_chartNameSource !== 'user') _chartNameSource = '';
     _suggestTitleFromFilename(file.name, true);
   }
 
+  var text = '';
   try {
-    var text = '';
 
     if (ext === 'txt' || ext === 'md') {
-      // Read text FIRST — arrayBuffer() before text() can exhaust the stream
       text = await file.text();
 
     } else if (ext === 'pdf') {
-      var pdfData = await file.arrayBuffer();
-      var pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-      var pages = [];
-      for (var i = 1; i <= pdf.numPages; i++) {
-        var pg = await pdf.getPage(i);
+      // Ensure pdf.js worker is configured
+      if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+      }
+      var pdfBytes = await file.arrayBuffer();
+      var pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+      var pageTexts = [];
+      for (var pi = 1; pi <= pdf.numPages; pi++) {
+        var pg = await pdf.getPage(pi);
         var ct = await pg.getTextContent();
         var lastY = null, lines = [], line = [];
         ct.items.forEach(function(item) {
           if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) {
             lines.push(line.join(' ')); line = [];
           }
-          if (item.str.trim()) line.push(item.str);
+          if (item.str && item.str.trim()) line.push(item.str);
           lastY = item.transform[5];
         });
         if (line.length) lines.push(line.join(' '));
-        pages.push(lines.filter(function(l) { return l.trim(); }).join('\n'));
+        pageTexts.push(lines.filter(function(l) { return l.trim(); }).join('\n'));
       }
-      text = pages.join('\n\n').trim();
-      if (!text) throw new Error('No extractable text — PDF may be image-based.');
+      text = pageTexts.join('\n\n').trim();
+      if (!text) throw new Error('No extractable text — PDF may be image-based (scanned). Try a TXT export instead.');
 
     } else if (ext === 'docx') {
-      var docxData = await file.arrayBuffer();
-      var htmlResult = await mammoth.convertToHtml({ arrayBuffer: docxData });
+      var docxBytes = await file.arrayBuffer();
+      var htmlResult = await mammoth.convertToHtml({ arrayBuffer: docxBytes });
       text = convertDocxHtmlToText(htmlResult.value).trim();
       if (!text) {
-        var rawResult = await mammoth.extractRawText({ arrayBuffer: docxData });
+        var rawResult = await mammoth.extractRawText({ arrayBuffer: docxBytes });
         text = rawResult.value.trim();
       }
       if (!text) throw new Error('Could not extract text from DOCX.');
     }
 
-    console.log('[handleFile] extracted chars:', text.length, 'from', file.name);
+  } catch(readErr) {
+    setPipeDot('raw', '');
+    showError('Could not read file: ' + readErr.message);
+    console.error('[handleFile] read error:', readErr);
+    return;
+  }
 
-    if (!text.trim()) {
-      showError('File appears to be empty or unreadable: ' + file.name);
-      setPipeDot('raw', '');
-      return;
+  if (!text || !text.trim()) {
+    setPipeDot('raw', '');
+    showError('File appears empty: ' + file.name + ' (0 chars extracted)');
+    return;
+  }
+
+  console.log('[handleFile] loaded', text.length, 'chars from', file.name, '(' + ext + ')');
+
+  // Write into textarea and pipe.raw
+  var _inputEl = document.getElementById('input-text');
+  if (append && _inputEl && _inputEl.value.trim()) {
+    pipe._chapterText = text;
+    ChapterRegistry.inferFromFilename(file.name);
+    if (!Array.isArray(pipe._inputSources)) pipe._inputSources = [];
+    pipe._inputSources.push({ filename: file.name, role: 'chapter', chars: text.length });
+    var sep = '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n— ' + file.name + ' —\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    var combined = _inputEl.value + sep + text;
+    _inputEl.value = combined;
+    pipe.raw = combined;
+    document.getElementById('fname').textContent = document.getElementById('fname').textContent + ' + ' + file.name;
+  } else {
+    if (!append) {
+      pipe._tocText = text;
+      pipe._chapterText = null;
+      pipe._inputSources = [{ filename: file.name, role: 'load', chars: text.length }];
     }
+    if (_inputEl) _inputEl.value = text;
+    pipe.raw = text;
+  }
 
-    // Hash from text (avoids re-reading the file stream)
-    var _fileHash = null;
-    try {
-      var _textBytes = new TextEncoder().encode(text);
-      _fileHash = await computeFileHash(_textBytes.buffer);
-    } catch(e) { /* non-fatal */ }
+  document.getElementById('raw-meta').textContent = text.length.toLocaleString() + ' chars';
+  setPipeDot('raw', 'done');
+  switchLeftTab('raw');
 
-    // Show text in raw tab first, then auto-run pipeline
-    var _inputEl = document.getElementById('input-text');
-    if (append && _inputEl && _inputEl.value.trim()) {
-      // ── v3.11.3: Context isolation ────────────────────────────────
-      // Store the chapter text ALONE on pipe._chapterText.
-      // _inputEl shows the combined text (TOC + chapter) for the user's
-      // visibility, but Pass 1 will receive only pipe._chapterText.
-      // The TOC text is preserved on pipe._tocText for ChapterRegistry/
-      // detectTOC use only — it must not reach any LLM call.
-      pipe._chapterText = text;  // chapter-only, clean of TOC
-      ChapterRegistry.inferFromFilename(file.name);
-
-      // Track input sources for the context warning
-      if (!Array.isArray(pipe._inputSources)) pipe._inputSources = [];
-      pipe._inputSources.push({ filename: file.name, role: 'chapter', chars: text.length });
-
-      // Build display text (TOC + separator + chapter) for Raw tab visibility
-      var separator = '\n\n' +
-        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-        '— ' + file.name + ' —\n' +
-        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-      var displayText = _inputEl.value + separator + text;
-
-      // Update the filename tag to show multiple files
-      var existing = document.getElementById('fname').textContent;
-      document.getElementById('fname').textContent = existing + ' + ' + file.name;
-
-      _inputEl.value = displayText;
-      pipe.raw = displayText;
-    } else {
-      // Load mode: this is the first (or only) file
-      if (!append) {
-        // Record it as TOC if detectTOC fires later, or as a plain doc
-        pipe._tocText     = text;  // tentative; confirmed as TOC in runExtraction if detected
-        pipe._chapterText = null;  // no chapter yet — user must append
-        pipe._inputSources = [{ filename: file.name, role: 'load', chars: text.length }];
-      }
-      document.getElementById('filename-tag').style.display = 'inline-block';
-      if (_inputEl) _inputEl.value = text;
-      pipe.raw = text;
-      console.log('[handleFile] set textarea value, chars:', text.length);
-    }
-    document.getElementById('raw-meta').textContent = (pipe._chapterText || pipe.raw).length.toLocaleString() + ' chars';
-    setPipeDot('raw', 'done');
-
-    // v3.11.0: record file hash + size in DocumentRegistry
+  // Hash (non-fatal, done after text is loaded)
+  try {
+    var hashBytes = new TextEncoder().encode(text);
+    var _fileHash = await computeFileHash(hashBytes.buffer);
     if (!append && _fileHash) {
       var _chEntry = ChapterRegistry.getCurrent();
-      var _docId   = _chEntry ? chapterSlug(_chEntry.chapterNum) : slugify(file.name.replace(/\.[^.]+$/, ''));
-      DocumentRegistry.update(_docId, {
-        sourceFilename: file.name,
-        fileHash:       _fileHash,
-        fileSizeBytes:  file.size,
-        status:         'pending',
-      });
+      var _docId = _chEntry ? chapterSlug(_chEntry.chapterNum) : slugify(file.name.replace(/\.[^.]+$/, ''));
+      DocumentRegistry.update(_docId, { sourceFilename: file.name, fileHash: _fileHash, fileSizeBytes: file.size, status: 'pending' });
     }
+  } catch(e) { /* non-fatal */ }
 
-    // Switch to Raw tab so user sees the loaded text
-    switchLeftTab('raw');
-
-    // Auto-run pipeline so the user sees structured output immediately
-    await sleep(200);
-    try {
-      await runPipeline();
-    } catch(pipeErr) {
-      console.error('[handleFile] Pipeline error after load:', pipeErr);
-    }
-
-  } catch(err) {
-    setPipeDot('raw', '');
-    console.error('[handleFile] Error loading file:', err);
-    showError('File error: ' + err.message);
-  }
+  // Auto-run pipeline
+  await sleep(50);
+  try { await runPipeline(); } catch(e) { console.error('[handleFile] pipeline err:', e); }
 }
 
 // ── Mermaid file load ─────────────────────────────────────────────
