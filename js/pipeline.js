@@ -2306,7 +2306,8 @@ function resetPipelineStages() {
 }
 
 function clearAll() {
-  inputEl.value = '';
+  var _raw = document.getElementById('input-text');
+  if (_raw) _raw.value = '';
   pipe.raw = ''; pipe.clean = ''; pipe.chunks = []; pipe.preparsed = [];
   pipe.actors = []; pipe.keywords = [];
   pipe.entities = null; pipe.entityRegistry = null;

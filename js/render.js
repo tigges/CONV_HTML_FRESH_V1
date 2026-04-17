@@ -264,10 +264,11 @@ async function handleFile(file, append) {
     }
 
     // Show text in raw tab first, then auto-run pipeline
-    if (append && inputEl.value.trim()) {
+    var _inputEl = document.getElementById('input-text');
+    if (append && _inputEl && _inputEl.value.trim()) {
       // ── v3.11.3: Context isolation ────────────────────────────────
       // Store the chapter text ALONE on pipe._chapterText.
-      // inputEl shows the combined text (TOC + chapter) for the user's
+      // _inputEl shows the combined text (TOC + chapter) for the user's
       // visibility, but Pass 1 will receive only pipe._chapterText.
       // The TOC text is preserved on pipe._tocText for ChapterRegistry/
       // detectTOC use only — it must not reach any LLM call.
@@ -283,13 +284,13 @@ async function handleFile(file, append) {
         '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
         '— ' + file.name + ' —\n' +
         '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
-      var displayText = inputEl.value + separator + text;
+      var displayText = _inputEl.value + separator + text;
 
       // Update the filename tag to show multiple files
       var existing = document.getElementById('fname').textContent;
       document.getElementById('fname').textContent = existing + ' + ' + file.name;
 
-      inputEl.value = displayText;
+      _inputEl.value = displayText;
       pipe.raw = displayText;
     } else {
       // Load mode: this is the first (or only) file
@@ -300,7 +301,7 @@ async function handleFile(file, append) {
         pipe._inputSources = [{ filename: file.name, role: 'load', chars: text.length }];
       }
       document.getElementById('filename-tag').style.display = 'inline-block';
-      inputEl.value = text;
+      if (_inputEl) _inputEl.value = text;
       pipe.raw = text;
     }
     document.getElementById('raw-meta').textContent = (pipe._chapterText || pipe.raw).length.toLocaleString() + ' chars';
@@ -327,6 +328,7 @@ async function handleFile(file, append) {
 
   } catch(err) {
     setPipeDot('raw', '');
+    console.error('[handleFile] Error loading file:', err);
     showError('File error: ' + err.message);
   }
 }
