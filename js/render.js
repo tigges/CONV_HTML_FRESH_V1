@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════════
-// Flowchart Converter v4.0 — render.js — Mermaid rendering, zoom/pan, file handling, saved list
+// Flowinject v4.0 — render.js — Mermaid rendering, zoom/pan, file handling, saved list
 // Part of the modular refactor from monolithic index.html (v3.12.2)
 // All functions remain global-scope for backward compatibility.
 // ══════════════════════════════════════════════════════════════════

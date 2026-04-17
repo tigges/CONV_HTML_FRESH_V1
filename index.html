@@ -6,13 +6,13 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Flowchart Converter v4.0</title>
+<title>Flowinject v4.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <!-- CodeMirror 5 (v2.8.0) — syntax-highlighted Mermaid code editor -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/eclipse.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
@@ -1245,16 +1245,16 @@ header {
 /* Mixed-case learned terms badge */
 .g-tag.mixed-learned { background: var(--purple-50,#f5f3ff); color: var(--purple-700,#6d28d9); border-color: var(--purple-200,#ddd6fe); }
 
-/* CodeMirror editor (v2.8.0) */
-#cm-editor-wrap { flex: 1; min-height: 0; overflow: auto; background: #282a36; }
+/* CodeMirror editor (v2.8.0) — light theme to match app */
+#cm-editor-wrap { flex: 1; min-height: 0; overflow: auto; background: var(--white); }
 #cm-editor-wrap .CodeMirror {
   height: 100%; min-height: 200px; font-family: 'JetBrains Mono', monospace;
-  font-size: 12px; line-height: 1.7; background: #282a36; color: #f8f8f2;
+  font-size: 12px; line-height: 1.7; background: var(--white); color: var(--gray-900);
   border: none; border-radius: 0;
 }
 #cm-editor-wrap .CodeMirror-scroll { padding-bottom: 20px; }
-#cm-editor-wrap .CodeMirror-cursor { border-left-color: #f8f8f2; }
-#cm-editor-wrap .CodeMirror-selected { background: rgba(255,255,255,0.15); }
+#cm-editor-wrap .CodeMirror-cursor { border-left-color: var(--gray-900); }
+#cm-editor-wrap .CodeMirror-selected { background: var(--blue-100); }
 /* Mermaid keyword colouring via CodeMirror simple mode */
 .cm-keyword  { color: #ff79c6 !important; font-weight: 700; }
 .cm-builtin  { color: #8be9fd !important; }
@@ -1291,8 +1291,8 @@ header {
 <header>
   <div class="logo">⟳</div>
   <div class="brand">
-    <h1>Flowchart Converter</h1>
-    <p>Documents → Pipeline → Visual Charts</p>
+    <h1>Flowinject</h1>
+    <p>Documents → AI Flowcharts</p>
   </div>
   <div class="hdiv"></div>
   <span class="badge">Mermaid + Claude AI</span>
@@ -2146,7 +2146,7 @@ flowchart TD
 <div id="toast"></div>
 
 <!-- ══════════════════════════════════════════════════════════════════
-     Flowchart Converter v4.0 — Modular JS
+     Flowinject v4.0 — Modular JS
      Modules are loaded in dependency order:
        storage.js  → pipeline.js → render.js → generate.js → ui.js
      ══════════════════════════════════════════════════════════════════ -->

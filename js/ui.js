@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════════
-// Flowchart Converter v4.0 — ui.js — Glossary, History, Analysis dashboard, AutoSave, GitHub, Projects, init
+// Flowinject v4.0 — ui.js — Glossary, History, Analysis dashboard, AutoSave, GitHub, Projects, init
 // Part of the modular refactor from monolithic index.html (v3.12.2)
 // All functions remain global-scope for backward compatibility.
 // ══════════════════════════════════════════════════════════════════
@@ -1285,7 +1285,7 @@ function buildAnnotatedSVG() {
     // Subtitle
     '<text x="16" y="38" font-family="Inter,sans-serif" font-size="11" fill="rgba(255,255,255,0.75)">' + escHtml(subtitle) + '</text>' +
     // Version + domain badge (right-aligned)
-    '<text x="' + (w - 12) + '" y="20" font-family="Inter,sans-serif" font-size="10" fill="rgba(255,255,255,0.6)" text-anchor="end">Flowchart Converter ' + version + '</text>' +
+    '<text x="' + (w - 12) + '" y="20" font-family="Inter,sans-serif" font-size="10" fill="rgba(255,255,255,0.6)" text-anchor="end">Flowinject ' + version + '</text>' +
     '<text x="' + (w - 12) + '" y="36" font-family="Inter,sans-serif" font-size="10" fill="rgba(255,255,255,0.5)" text-anchor="end">' + escHtml(domain) + '</text>' +
     // Diagram content (shifted down by HEADER)
     '<g transform="translate(0,' + HEADER + ')">' + lastSVG + '</g>' +
@@ -1353,7 +1353,7 @@ function printChart() {
   if (!title) title = match ? match[1] : 'Flowchart';
 
   var meta = new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' }) +
-    ' · Flowchart Converter ' + APP_VERSION +
+    ' · Flowinject ' + APP_VERSION +
     ' · ' + document.getElementById('domain-preset').value;
 
   document.getElementById('print-title').textContent = title;
@@ -4258,7 +4258,7 @@ var CHANGELOG = [
   {
     version: 'v2.0.2',
     date: '2026-04-13',
-    summary: 'Initial GitHub setup — full Flowchart Converter feature set',
+    summary: 'Initial GitHub setup — full Flowinject feature set',
     changes: [
       'Multi-format conversion: Flowchart, Swim Lane, Sequence via Claude AI',
       'Five-stage pipeline: Raw → Clean → Chunk → Pre-Parse → Analysis',
@@ -4454,7 +4454,7 @@ _pruneDrafts(); // remove localStorage drafts older than 24 hours
   window.cmEditor = CodeMirror(wrap, {
     value:        textArea.value,
     mode:         'mermaid',
-    theme:        'dracula',
+    theme:        'eclipse',
     lineNumbers:  true,
     lineWrapping: false,
     autofocus:    false,
@@ -4574,7 +4574,7 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'r') { e.preventDefault(); renderFromEditor(); }
 });
 
-console.log('Flowchart Converter ' + APP_VERSION + ' ready');
+console.log('Flowinject ' + APP_VERSION + ' ready');
 // ── Dev helper ────────────────────────────────────────────────────
 // Exposes architecture info in browser console — no sensitive data.
 // Usage: console.log(window.__fc_debug)   or   window.__fc_debug.pipe

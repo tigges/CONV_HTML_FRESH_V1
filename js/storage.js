@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════════
-// Flowchart Converter v4.0 — storage.js — State, persistence, slugify, ChapterRegistry, DocumentRegistry, GitHub sync
+// Flowinject v4.0 — storage.js — State, persistence, slugify, ChapterRegistry, DocumentRegistry, GitHub sync
 // Part of the modular refactor from monolithic index.html (v3.12.2)
 // All functions remain global-scope for backward compatibility.
 // ══════════════════════════════════════════════════════════════════
@@ -241,7 +241,7 @@ var INTEL_FLAGS = loadIntelFlags();
 // Header badge format:  "v4.0.0 · 14 Apr 2026"  (from source, always accurate)
 // Hover tooltip adds:   deploy time from document.lastModified (updates on git pull)
 function syncVersion() {
-  document.title = 'Flowchart Converter ' + APP_VERSION;
+  document.title = 'Flowinject ' + APP_VERSION;
 
   // Logic tab badge — version only (compact)
   var logicBadge = document.getElementById('logic-version-badge');
