@@ -80,13 +80,19 @@ async function runPipelineOnly() {
   var hasText = document.getElementById('input-text').value.trim().length > 0;
   if (!hasText) { showToast('Load or paste a document first'); switchLeftTab('raw'); return; }
   var btn = document.getElementById('pipeline-only-btn');
-  btn.disabled = true;
-  btn.textContent = '⟳ Running…';
-  updatePipelineStatus(false, 'Running pipeline…');
-  await runPipeline();
-  updatePreflight();
-  btn.disabled = false;
-  btn.textContent = '⚙ Pipeline';
+  try {
+    btn.disabled = true;
+    btn.textContent = '⟳ Running…';
+    updatePipelineStatus(false, 'Running pipeline…');
+    await runPipeline();
+    updatePreflight();
+  } catch(err) {
+    console.error('[runPipelineOnly]', err);
+    showToast('Pipeline error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚙ Pipeline Only';
+  }
 }
 
 // ── Tier 1: Rule-based diagram generator (no API call) ────────────

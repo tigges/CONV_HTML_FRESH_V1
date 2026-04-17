@@ -440,6 +440,7 @@ async function runPipeline() {
   btn.disabled = true;
   btn.textContent = '⟳ Running pipeline…';
 
+  try {
   // Stage 1: Raw
   pipe.raw = rawText;
   setPipeDot('raw', 'done');
@@ -513,7 +514,6 @@ async function runPipeline() {
   setPipeDot('analysis', 'done');
 
   // Re-enable button and update status
-  var btn = document.getElementById('convert-btn');
   btn.disabled = false;
   btn.textContent = '→ Generate Chart';
   updatePipelineStatus(true);
@@ -528,6 +528,18 @@ async function runPipeline() {
     ', ' + pipe.actors.length + ' actor' + (pipe.actors.length !== 1 ? 's' : '') + ' · ~' + nodeEst + ' nodes · click Generate Chart ↓');
 
   switchLeftTab('preparse');
+
+  } catch(err) {
+    console.error('[runPipeline] Error:', err);
+    showToast('Pipeline error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    if (!pipe.preparsed || !pipe.preparsed.length) {
+      btn.textContent = '▶ Run & Generate';
+    } else {
+      btn.textContent = '→ Generate Chart';
+    }
+  }
 }
 
 // ── Stage 2: Clean text ───────────────────────────────────────────

@@ -319,12 +319,16 @@ async function handleFile(file, append) {
       });
     }
 
-    // Switch to Raw tab so user sees the combined text
+    // Switch to Raw tab so user sees the loaded text
     switchLeftTab('raw');
 
-    // Re-run pipeline on combined text
+    // Auto-run pipeline so the user sees structured output immediately
     await sleep(200);
-    await runPipeline();
+    try {
+      await runPipeline();
+    } catch(pipeErr) {
+      console.error('[handleFile] Pipeline error after load:', pipeErr);
+    }
 
   } catch(err) {
     setPipeDot('raw', '');
@@ -449,7 +453,7 @@ function setLoading(on, msg) {
     document.getElementById('graph-controls').style.display = 'none';
   } else {
     // Restore button text based on pipeline state
-    btn.textContent = pipe.preparsed && pipe.preparsed.length ? '→ Generate Chart' : '▶ Run Pipeline + Generate';
+    btn.textContent = pipe.preparsed && pipe.preparsed.length ? '→ Generate Chart' : '▶ Run & Generate';
   }
 }
 
