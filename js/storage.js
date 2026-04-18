@@ -4,9 +4,17 @@
 // All functions remain global-scope for backward compatibility.
 // ══════════════════════════════════════════════════════════════════
 
-// Global error trap — catches any runtime crash before app handlers initialise.
-// Remove or no-op once the page-load crash is resolved.
-window.onerror = function(m, s, l, c, e) { console.error('SCRIPT ERROR:', m, 'line:' + l, e); };
+// ── CRITICAL: declare pipe first — must be available to all other modules ──
+var pipe = {
+  raw:'', clean:'', chunks:[], preparsed:[], actors:[], keywords:[],
+  stats:{}, entities:null, entityRegistry:null, graph:null, extraction:null,
+  graveyard:[], stages:[],
+  _tocText:null, _chapterText:null, _inputSources:[], _isTocLoad:false,
+  tokenLog:[],
+};
+
+// Global error trap
+window.onerror = function(m, s, l, c, e) { console.error('[FC] SCRIPT ERROR:', m, 'line:' + l, e); };
 
 // ── Version ───────────────────────────────────────────────────────
 // APP_VERSION is the only version string to update on each release.
@@ -1352,34 +1360,6 @@ async function loadChartsFromGitHub(projectSlug) {
 
 // ── Step 6 state ─────────────────────────────────────────────────
 var _savedGroupBy = 'cluster'; // 'cluster'|'chapter'|'type'|'tag'|'none'
-
-// Pipeline data object — populated stage by stage
-var pipe = {
-  raw:       '',
-  clean:     '',
-  chunks:    [],
-  preparsed: [],   // [{type, text, label, actor, sourceIdx, confidence}]
-  actors:    [],
-  keywords:  [],
-  stats:     {},
-  entities:  null, // v2.5.0: structured entity JSON from Pass 1
-  entityRegistry: null, // v2.6.0: normalised entity map
-  graph:      null, // v3.4.0: JSON graph from Pass 2 schema output
-  extraction: null, // v3.6.0: ExtractionResult handoff object
-  // v3.1.0: intelligence pipeline tracing
-  graveyard: [],   // [{text, reason, rule, confidence:'hard'|'medium'|'soft'}]
-  stages:    [],   // [{id, label, removed, graved, reclassified, changed, kept}]
-  // v3.11.3: TOC/chapter context isolation
-  // _tocText:     raw text of the TOC-only document (set on ↑ Load when TOC detected)
-  // _chapterText: raw text of the most recently appended chapter (set on ↑ Append)
-  //               Pass 1 uses _chapterText when present; falls back to clean.
-  // _inputSources: [{filename, role:'toc'|'chapter', chars}] — for the context warning
-  // _isTocLoad:   true when ↑ TOC button was used — forces TOC path in runPipeline()
-  _tocText:      null,
-  _chapterText:  null,
-  _inputSources: [],
-  _isTocLoad:    false,
-};
 
 // Actor colour palette
 var ACTOR_COLORS = [
