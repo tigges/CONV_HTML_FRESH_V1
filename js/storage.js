@@ -20,7 +20,7 @@ window.onerror = function(m, s, l, c, e) { console.error('[FC] SCRIPT ERROR:', m
 // APP_VERSION is the only version string to update on each release.
 // APP_BUILD_DATE is computed dynamically at page load — always the current date.
 // All badges, title and exports derive from these two constants.
-var APP_VERSION    = 'v4.0.0';
+var APP_VERSION    = 'v4.1.0';
 var APP_BUILD_DATE = (function() {
   var d = new Date();
   return d.getFullYear() + '-' +

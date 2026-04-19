@@ -2400,6 +2400,7 @@ function _anMap(ex) {
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
       '<div class="an-section-title" style="margin:0;">⊙ Process Corpus</div>' +
       '<div style="display:flex;gap:6px;">' +
+        '<button class="an-map-generate-btn" onclick="shareProjectMapURL()" style="font-size:11px;padding:4px 10px;" title="Share this project map via URL">⇗ Share Map</button>' +
         '<button class="an-map-generate-btn" onclick="_exportProjectMapHtml()" style="font-size:11px;padding:4px 10px;" title="Export interactive HTML map">↗ Export Map</button>' +
       '</div>' +
     '</div>' +
@@ -3790,6 +3791,20 @@ var TAG_BAR_COLORS = {
 
 // ── Version changelog — add a new entry at the TOP for each release ──
 var CHANGELOG = [
+  {
+    version: 'v4.1.0',
+    date: '2026-04-19',
+    summary: 'Share via URL — project map deep-link; recipients auto-navigate to Map tab with GitHub-backed chart data',
+    changes: [
+      'shareProjectMapURL(): new function in generate.js. Generates a URL of the form <page>#project=<slug>&view=map for the currently selected project. Uses the existing share-banner overlay (reuses _showShareBanner helper). Accessible via the new "⇗ Share Map" button in the Analysis → Map tab toolbar.',
+      '_showShareBanner(title, url): extracted helper that updates the share-banner <h4> title and URL field before showing the overlay. Both shareViaURL() (single chart) and shareProjectMapURL() (project map) go through this helper.',
+      '_loadSharedProjectView(): parses #project=<slug>&view=map from window.location.hash on startup. Triggered by loadSharedChart() after the existing ?c= query-param path returns early. Defers via setTimeout(600) so the DOM and project selector are fully initialised.',
+      '_activateSharedProjectMap(slug): async function. (1) Looks up the project in localStorage; (2) Falls back to fetching data/projects.json from GitHub (public read, no PAT needed for public repos); (3) Merges the project into the local project list + project selector; (4) Restores ChapterRegistry for the project; (5) Calls _mergeChartsFromGitHub() if no local saved charts match the project; (6) Calls switchRightTab("analysis") then _activateAnPill("map").',
+      '_ghReadPublic(path): lightweight GitHub file reader that uses GH_REPO/GH_BRANCH from ui.js globals, with optional PAT from ghPAT(). Returns decoded string or null.',
+      '_mergeChartsFromGitHub(projSlug): reads data/charts/{slug}/processes directory listing from GitHub, downloads each .json sidecar + .mmd file that is not already in getSaved(), and inserts entries flagged fromGitHub:true into localStorage via putSaved(). Called once on deep-link navigation when local saved list has no matching charts.',
+      '"⇗ Share Map" button added to the Process Corpus toolbar in Analysis → Map tab (next to "↗ Export Map"). Calls shareProjectMapURL().',
+    ],
+  },
   {
     version: 'v3.12.1',
     date: '2026-04-17',
