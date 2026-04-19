@@ -1,0 +1,2352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>FlowInject — Document to Diagram</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green-700: #2d7a5f; --green-600: #3d9a74; --green-500: #4db882; --green-200: #a7dfca;
+  --green-100: #d4f0e5; --green-50: #edf9f4;
+  --gray-900: #1a1a1a; --gray-700: #404040; --gray-600: #595959; --gray-500: #737373;
+  --gray-400: #9e9e9e; --gray-300: #c7c7c7; --gray-200: #e0e0e0; --gray-100: #f0f0ef;
+  --gray-50: #f5f5f3; --white: #ffffff;
+  --amber-700: #b45309; --amber-100: #fef3c7; --amber-50: #fffbeb;
+  --red-600: #dc2626; --red-50: #fef2f2;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow: 0 2px 8px rgba(0,0,0,0.1);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+  --radius: 12px; --radius-sm: 8px;
+}
+body {
+  font-family: 'Inter', system-ui, sans-serif; font-size: 14px;
+  background: var(--gray-50); color: var(--gray-900);
+  min-height: 100vh; display: flex; flex-direction: column;
+}
+
+/* ── Header ── */
+.c-header {
+  background: var(--white); border-bottom: 1px solid var(--gray-200);
+  padding: 0 24px; height: 52px;
+  display: flex; align-items: center; gap: 0;
+  flex-shrink: 0; box-shadow: var(--shadow-sm);
+}
+.c-header-logo {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--green-700), var(--green-500));
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 15px; font-weight: 700; flex-shrink: 0;
+}
+.c-header-brand {
+  font-size: 15px; font-weight: 700; color: var(--gray-900);
+  margin-left: 10px; letter-spacing: -0.01em;
+}
+.c-header-sep {
+  color: var(--gray-300); margin: 0 8px; font-size: 18px; font-weight: 300;
+}
+.c-header-project {
+  font-size: 14px; color: var(--gray-500); max-width: 280px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  cursor: pointer; padding: 2px 4px; border-radius: 4px;
+  transition: background 0.15s;
+}
+.c-header-project:hover { background: var(--gray-100); color: var(--gray-700); }
+.c-header-project[contenteditable="true"] {
+  background: var(--green-50); color: var(--gray-900);
+  outline: none; border: 1px solid var(--green-200);
+}
+.c-header-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.c-btn-outline {
+  border: 1px solid var(--gray-300); background: var(--white);
+  border-radius: 20px; padding: 6px 16px; font-size: 13px;
+  font-weight: 500; color: var(--gray-700); cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: inherit;
+}
+.c-btn-outline:hover { border-color: var(--gray-400); background: var(--gray-50); }
+.c-btn-new {
+  background: var(--white); border: 1px solid var(--gray-300);
+  border-radius: 20px; padding: 6px 14px; font-size: 13px;
+  font-weight: 500; color: var(--gray-700); cursor: pointer;
+  font-family: inherit; display: flex; align-items: center; gap: 5px;
+  transition: border-color 0.15s;
+}
+.c-btn-new:hover { border-color: var(--gray-400); }
+.c-btn-new svg { width: 13px; height: 13px; }
+
+/* ── Stepper ── */
+.c-stepper {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; padding: 20px 0 16px;
+}
+.c-step {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 500; color: var(--gray-400);
+}
+.c-step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600;
+  border: 2px solid var(--gray-300); color: var(--gray-400);
+  background: var(--white); transition: all 0.2s; flex-shrink: 0;
+}
+.c-step.active .c-step-num {
+  background: var(--green-600); border-color: var(--green-600);
+  color: var(--white);
+}
+.c-step.done .c-step-num {
+  background: var(--white); border-color: var(--green-600);
+  color: var(--green-600);
+}
+.c-step.done .c-step-num::after { content: '✓'; font-size: 13px; }
+.c-step.done .c-step-num span { display: none; }
+.c-step.active { color: var(--gray-900); }
+.c-step.done { color: var(--gray-500); }
+.c-step-line {
+  width: 60px; height: 1px; background: var(--gray-300); margin: 0 4px;
+  flex-shrink: 0;
+}
+.c-step-line.done { background: var(--green-500); }
+
+/* ── Main content area ── */
+.c-main {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 0 20px 48px;
+}
+.c-panel {
+  width: 100%; max-width: 600px;
+  display: none; flex-direction: column; gap: 12px;
+}
+.c-panel.active { display: flex; }
+
+/* ── Drop zone ── */
+.c-dropzone {
+  border: 2px dashed var(--gray-300); border-radius: var(--radius);
+  background: var(--gray-100); padding: 48px 32px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  text-align: center;
+}
+.c-dropzone:hover, .c-dropzone.drag-over {
+  border-color: var(--green-500); background: var(--green-50);
+}
+.c-dropzone-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: var(--green-100); display: flex; align-items: center;
+  justify-content: center; color: var(--green-600); font-size: 22px;
+  margin-bottom: 4px;
+}
+.c-dropzone-title {
+  font-size: 16px; font-weight: 600; color: var(--gray-900);
+}
+.c-dropzone-sub {
+  font-size: 13px; color: var(--gray-500);
+}
+.c-format-pills {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+  margin-top: 4px;
+}
+.c-format-pill {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  border: 1px solid var(--gray-300); border-radius: 20px;
+  padding: 3px 10px; color: var(--gray-500); background: var(--white);
+}
+
+/* ── File card ── */
+.c-file-card {
+  background: var(--white); border: 1px solid var(--gray-200);
+  border-radius: var(--radius); padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.c-file-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--gray-100); display: flex; align-items: center;
+  justify-content: center; color: var(--gray-500); font-size: 16px;
+  flex-shrink: 0;
+}
+.c-file-info { flex: 1; min-width: 0; }
+.c-file-name { font-size: 14px; font-weight: 600; color: var(--gray-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-file-meta { font-size: 12px; color: var(--gray-400); margin-top: 1px; }
+.c-file-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.c-domain-chip {
+  font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+  background: var(--green-50); color: var(--green-700);
+  border: 1px solid var(--green-200);
+}
+.c-remove-btn {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--gray-100); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gray-400); font-size: 14px; line-height: 1;
+  transition: background 0.15s; font-family: inherit;
+}
+.c-remove-btn:hover { background: var(--gray-200); color: var(--gray-700); }
+
+/* ── Info / alert boxes ── */
+.c-info-box {
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  font-size: 13px; display: flex; align-items: flex-start; gap: 10px;
+}
+.c-info-box.green {
+  background: var(--green-50); border: 1px solid var(--green-200);
+  color: var(--green-700);
+}
+.c-info-box.amber {
+  background: var(--amber-50); border: 1px solid #fde68a;
+  color: var(--amber-700);
+}
+.c-info-box.red {
+  background: var(--red-50); border: 1px solid #fecaca;
+  color: var(--red-600);
+}
+.c-info-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  margin-top: 4px;
+}
+.c-info-box.green .c-info-dot { background: var(--green-600); }
+.c-info-box.amber .c-info-dot { background: var(--amber-700); }
+.c-info-box.red   .c-info-dot { background: var(--red-600); }
+
+/* ── Step 2: Run cards ── */
+.c-run-summary-card {
+  background: var(--white); border: 1px solid var(--gray-200);
+  border-radius: var(--radius); padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+}
+.c-run-summary-card.highlight {
+  background: var(--green-50); border-color: var(--green-200);
+}
+.c-run-summary-left { display: flex; align-items: center; gap: 10px; }
+.c-run-summary-text { font-size: 13px; color: var(--gray-700); }
+.c-run-summary-text strong { color: var(--gray-900); font-weight: 600; }
+.c-change-link {
+  font-size: 12px; color: var(--gray-400); cursor: pointer;
+  text-decoration: none; border-bottom: 1px dotted var(--gray-300);
+  background: none; border-top: none; border-left: none; border-right: none;
+  font-family: inherit; padding: 0;
+}
+.c-change-link:hover { color: var(--gray-600); }
+
+/* Auto-suggestion chip */
+.c-auto-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 500; padding: 3px 8px 3px 10px;
+  border-radius: 20px; background: var(--amber-50); color: var(--amber-700);
+  border: 1px solid #fde68a; cursor: pointer; white-space: nowrap;
+}
+.c-auto-chip:hover { background: var(--amber-100); }
+.c-auto-chip-dismiss {
+  background: none; border: none; cursor: pointer;
+  color: var(--amber-700); font-size: 13px; padding: 0; line-height: 1;
+  font-family: inherit;
+}
+.c-auto-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── Generate button area ── */
+.c-generate-row {
+  display: flex; gap: 8px; align-items: stretch;
+}
+.c-generate-btn {
+  flex: 1; background: var(--gray-900); color: var(--white);
+  border: none; border-radius: var(--radius-sm); padding: 14px 20px;
+  font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background 0.15s;
+}
+.c-generate-btn:hover:not(:disabled) { background: var(--gray-700); }
+.c-generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.c-generate-btn.preview-mode { background: var(--green-600); }
+.c-generate-btn.preview-mode:hover:not(:disabled) { background: var(--green-700); }
+.c-set-btn {
+  background: var(--white); border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit;
+  color: var(--gray-600); display: flex; align-items: center; gap: 5px;
+  transition: border-color 0.15s;
+}
+.c-set-btn:hover { border-color: var(--gray-400); }
+.c-set-btn.has-key { color: var(--green-700); border-color: var(--green-200); }
+.c-generate-caption {
+  text-align: center; font-size: 12px; color: var(--gray-400); margin-top: -4px;
+}
+
+/* ── Set popover ── */
+.c-set-popover {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1000; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.3);
+}
+.c-set-popover.open { display: flex; }
+.c-set-box {
+  background: var(--white); border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); padding: 24px;
+  width: 420px; max-width: 95vw;
+}
+.c-set-box h3 {
+  font-size: 15px; font-weight: 700; color: var(--gray-900);
+  margin-bottom: 18px;
+}
+.c-set-section { margin-bottom: 18px; }
+.c-set-section:last-of-type { margin-bottom: 0; }
+.c-set-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--gray-500); margin-bottom: 8px;
+}
+.c-mode-toggle {
+  display: flex; border: 1px solid var(--gray-200); border-radius: 8px;
+  overflow: hidden;
+}
+.c-mode-btn {
+  flex: 1; padding: 10px 14px; border: none; background: var(--white);
+  font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+  color: var(--gray-600); text-align: left; transition: background 0.1s;
+  display: flex; align-items: center; gap: 8px;
+}
+.c-mode-btn + .c-mode-btn { border-left: 1px solid var(--gray-200); }
+.c-mode-btn.active { background: var(--green-50); color: var(--green-700); }
+.c-mode-btn.active .c-mode-radio::after { opacity: 1; }
+.c-mode-radio {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--gray-300); flex-shrink: 0; position: relative;
+}
+.c-mode-btn.active .c-mode-radio { border-color: var(--green-600); }
+.c-mode-radio::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green-600); opacity: 0;
+}
+.c-mode-desc {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.c-mode-desc span { font-size: 11px; color: var(--gray-400); font-weight: 400; }
+.c-set-input {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--gray-200);
+  border-radius: 8px; font-size: 13px; font-family: 'JetBrains Mono', monospace;
+  outline: none; transition: border-color 0.15s;
+}
+.c-set-input:focus { border-color: var(--green-500); }
+.c-set-input-hint { font-size: 11px; color: var(--gray-400); margin-top: 5px; }
+.c-advanced-toggle {
+  background: none; border: none; font-size: 12px; color: var(--gray-400);
+  cursor: pointer; font-family: inherit; padding: 0; display: flex;
+  align-items: center; gap: 4px; margin-top: 4px;
+}
+.c-advanced-toggle:hover { color: var(--gray-600); }
+.c-advanced-body { display: none; margin-top: 14px; }
+.c-advanced-body.open { display: block; }
+.c-set-row { display: flex; gap: 10px; margin-bottom: 10px; }
+.c-set-row:last-child { margin-bottom: 0; }
+.c-set-field { flex: 1; }
+.c-set-field-label { font-size: 11px; color: var(--gray-500); margin-bottom: 4px; font-weight: 500; }
+.c-set-select {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--gray-200);
+  border-radius: 6px; font-size: 12px; font-family: inherit;
+  background: var(--white); outline: none;
+}
+.c-set-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.c-set-cancel {
+  background: none; border: 1px solid var(--gray-200); border-radius: 8px;
+  padding: 8px 16px; font-size: 13px; cursor: pointer; font-family: inherit;
+  color: var(--gray-600);
+}
+.c-set-confirm {
+  background: var(--gray-900); border: none; border-radius: 8px;
+  padding: 8px 20px; font-size: 13px; font-weight: 600; color: var(--white);
+  cursor: pointer; font-family: inherit;
+}
+.c-set-confirm:hover { background: var(--gray-700); }
+
+/* ── Step 3: View header ── */
+.c-view-header {
+  width: 100%; max-width: 860px; padding: 16px 0 12px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.c-view-title { font-size: 16px; font-weight: 700; color: var(--gray-900); }
+.c-view-meta { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+.c-view-title-group { flex: 1; min-width: 0; }
+.c-view-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.c-view-btn {
+  background: var(--white); border: 1px solid var(--gray-200);
+  border-radius: 8px; padding: 7px 14px; font-size: 13px;
+  font-weight: 500; cursor: pointer; font-family: inherit; color: var(--gray-700);
+  display: flex; align-items: center; gap: 5px; transition: border-color 0.15s;
+}
+.c-view-btn:hover { border-color: var(--gray-400); }
+.c-zoom-group {
+  display: flex; border: 1px solid var(--gray-200); border-radius: 8px;
+  overflow: hidden; background: var(--white);
+}
+.c-zoom-btn {
+  border: none; background: none; padding: 7px 10px;
+  font-size: 14px; cursor: pointer; color: var(--gray-600);
+  font-family: inherit; line-height: 1;
+}
+.c-zoom-btn:hover { background: var(--gray-100); }
+.c-zoom-btn + .c-zoom-btn { border-left: 1px solid var(--gray-200); }
+.c-view-toggle {
+  display: flex; border: 1px solid var(--gray-200); border-radius: 8px;
+  overflow: hidden; background: var(--white);
+}
+.c-view-toggle-btn {
+  border: none; background: none; padding: 7px 14px;
+  font-size: 13px; font-weight: 500; cursor: pointer; color: var(--gray-600);
+  font-family: inherit; display: flex; align-items: center; gap: 5px;
+}
+.c-view-toggle-btn + .c-view-toggle-btn { border-left: 1px solid var(--gray-200); }
+.c-view-toggle-btn.active { background: var(--gray-900); color: var(--white); }
+
+/* ── View panel ── */
+.c-view-panel {
+  width: 100%; max-width: 860px;
+  background: var(--white); border: 1px solid var(--gray-200);
+  border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  min-height: 400px; overflow: hidden;
+}
+
+/* ── Progress list ── */
+.c-progress-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 32px; gap: 8px; min-height: 340px;
+}
+.c-progress-spinner {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 3px solid var(--gray-200); border-top-color: var(--green-600);
+  animation: cSpin 0.7s linear infinite; margin-bottom: 8px;
+}
+@keyframes cSpin { to { transform: rotate(360deg); } }
+.c-progress-title {
+  font-size: 17px; font-weight: 600; color: var(--gray-900); margin-bottom: 4px;
+}
+.c-progress-subtitle { font-size: 13px; color: var(--gray-400); margin-bottom: 16px; }
+.c-progress-list { display: flex; flex-direction: column; gap: 8px; }
+.c-progress-item {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--gray-400);
+}
+.c-progress-item.done { color: var(--green-600); }
+.c-progress-item.active { color: var(--gray-900); font-weight: 600; }
+.c-progress-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: var(--gray-300);
+}
+.c-progress-item.done .c-progress-dot { background: var(--green-600); }
+.c-progress-item.active .c-progress-dot {
+  background: var(--green-600);
+  animation: cPulse 1s ease-in-out infinite;
+}
+@keyframes cPulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+/* ── Cluster card grid (View → Map) ── */
+.c-map-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 16px; padding: 24px;
+}
+@media (max-width: 700px) { .c-map-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 460px) { .c-map-grid { grid-template-columns: 1fr; } }
+.c-cluster-card {
+  border: 1px solid var(--gray-200); border-radius: var(--radius-sm);
+  padding: 16px; cursor: pointer; background: var(--white);
+  transition: box-shadow 0.15s, border-color 0.15s;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.c-cluster-card:hover { box-shadow: var(--shadow); border-color: var(--gray-300); }
+.c-cluster-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+}
+.c-cluster-name {
+  font-size: 14px; font-weight: 600; color: var(--gray-900); line-height: 1.3;
+}
+.c-cluster-meta { font-size: 12px; color: var(--gray-400); }
+.c-cluster-open {
+  font-size: 12px; color: var(--green-600); font-weight: 500;
+  margin-top: auto; display: flex; align-items: center; gap: 4px;
+}
+.c-cluster-generate-btn {
+  margin-top: auto; background: var(--green-600); border: none;
+  border-radius: 6px; padding: 7px 12px; font-size: 12px;
+  font-weight: 600; color: var(--white); cursor: pointer;
+  font-family: inherit; display: flex; align-items: center; gap: 5px;
+  transition: background 0.15s; width: 100%;
+  justify-content: center;
+}
+.c-cluster-generate-btn:hover { background: var(--green-700); }
+.c-cluster-generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── Diagram view ── */
+.c-diagram-wrap {
+  width: 100%; min-height: 400px; overflow: auto; padding: 20px;
+  position: relative;
+}
+.c-diagram-inner {
+  transform-origin: top left; transition: transform 0.15s;
+}
+.c-diagram-placeholder {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 360px; color: var(--gray-300); flex-direction: column;
+  gap: 10px; font-size: 14px;
+}
+.c-diagram-placeholder-icon { font-size: 36px; opacity: 0.4; }
+
+/* ── Scroll-down hint ── */
+.c-scroll-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--white); border: 1px solid var(--gray-200);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--gray-500); margin: 16px auto 0;
+  transition: box-shadow 0.15s; box-shadow: var(--shadow-sm);
+}
+.c-scroll-btn:hover { box-shadow: var(--shadow); }
+
+/* ── Toast ── */
+#c-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--gray-900); color: var(--white); font-size: 13px;
+  padding: 10px 18px; border-radius: 20px; z-index: 9999;
+  opacity: 0; transition: opacity 0.25s; pointer-events: none;
+  white-space: nowrap;
+}
+#c-toast.show { opacity: 1; }
+
+/* ── Hidden shim (pipeline compatibility) ── */
+#flowinject-shim { display: none; }
+
+/* ── Pro tool link ── */
+.c-pro-link {
+  text-align: center; font-size: 12px; color: var(--gray-400);
+  padding: 12px; margin-top: 8px;
+}
+.c-pro-link a { color: var(--gray-500); text-decoration: none; border-bottom: 1px dotted; }
+.c-pro-link a:hover { color: var(--gray-700); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     HEADER
+══════════════════════════════════════════════════════════════════ -->
+<header class="c-header">
+  <div class="c-header-logo">⇌</div>
+  <span class="c-header-brand">FlowInject</span>
+  <span class="c-header-sep">/</span>
+  <span class="c-header-project" id="c-project-name"
+        title="Click to rename project">Untitled project</span>
+  <div class="c-header-actions" id="c-header-actions">
+    <!-- "New chart" shown from Step 2 onward -->
+    <button class="c-btn-new" id="c-new-btn" style="display:none" onclick="cReset()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M8 3l-5 5 5 5M3 8h10"/>
+      </svg>
+      New chart
+    </button>
+    <button class="c-btn-outline" id="c-get-started-btn">Get started free</button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     STEPPER
+══════════════════════════════════════════════════════════════════ -->
+<div class="c-stepper" id="c-stepper">
+  <div class="c-step active" id="cstep-1">
+    <div class="c-step-num"><span>1</span></div>
+    <span class="c-step-label">Inject</span>
+  </div>
+  <div class="c-step-line" id="cline-1"></div>
+  <div class="c-step" id="cstep-2">
+    <div class="c-step-num"><span>2</span></div>
+    <span class="c-step-label">Run</span>
+  </div>
+  <div class="c-step-line" id="cline-2"></div>
+  <div class="c-step" id="cstep-3">
+    <div class="c-step-num"><span>3</span></div>
+    <span class="c-step-label">View</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════════════════════════════ -->
+<main class="c-main" id="c-main">
+
+  <!-- ── STEP 1: Inject ── -->
+  <div class="c-panel active" id="cpanel-1">
+    <!-- Drop zone -->
+    <div class="c-dropzone" id="c-dropzone"
+         onclick="document.getElementById('c-file-input').click()"
+         ondragover="cOnDragOver(event)" ondragleave="cOnDragLeave(event)"
+         ondrop="cOnDrop(event)">
+      <div class="c-dropzone-icon">↑</div>
+      <div class="c-dropzone-title">Drop your document here</div>
+      <div class="c-dropzone-sub">or click to browse</div>
+      <div class="c-format-pills">
+        <span class="c-format-pill">PDF</span>
+        <span class="c-format-pill">DOCX</span>
+        <span class="c-format-pill">TXT</span>
+        <span class="c-format-pill">MD</span>
+      </div>
+    </div>
+    <input type="file" id="c-file-input" accept=".pdf,.docx,.txt,.md,.text"
+           style="display:none" onchange="cOnFileSelect(event)">
+
+    <!-- File card (hidden until file loaded) -->
+    <div class="c-file-card" id="c-file-card" style="display:none">
+      <div class="c-file-icon" id="c-file-icon">📄</div>
+      <div class="c-file-info">
+        <div class="c-file-name" id="c-file-name">—</div>
+        <div class="c-file-meta" id="c-file-meta">—</div>
+      </div>
+      <div class="c-file-actions">
+        <span class="c-domain-chip" id="c-domain-chip" style="display:none">—</span>
+        <button class="c-remove-btn" onclick="cRemoveFile()" title="Remove file">✕</button>
+      </div>
+    </div>
+
+    <!-- TOC info box -->
+    <div class="c-info-box green" id="c-toc-box" style="display:none">
+      <div class="c-info-dot"></div>
+      <div id="c-toc-msg">Table of contents detected.</div>
+    </div>
+
+    <!-- Error box -->
+    <div class="c-info-box red" id="c-load-error" style="display:none">
+      <div class="c-info-dot"></div>
+      <div id="c-load-error-msg">Could not read file.</div>
+    </div>
+
+    <!-- Scroll hint -->
+    <div class="c-scroll-btn" id="c-scroll-hint-1" style="display:none"
+         onclick="cGoStep(2)" title="Continue to Run">↓</div>
+  </div>
+
+  <!-- ── STEP 2: Run ── -->
+  <div class="c-panel" id="cpanel-2">
+
+    <!-- File summary -->
+    <div class="c-run-summary-card" id="c-run-file-card">
+      <div class="c-run-summary-left">
+        <div class="c-file-icon" id="c-run-file-icon" style="width:30px;height:30px;font-size:14px;">📄</div>
+        <div class="c-run-summary-text">
+          <strong id="c-run-file-name">—</strong>
+          <span id="c-run-toc-chip" style="display:none"></span>
+        </div>
+      </div>
+      <button class="c-change-link" onclick="cGoStep(1)">Change</button>
+    </div>
+
+    <!-- Project/context card -->
+    <div class="c-run-summary-card highlight" id="c-run-project-card">
+      <div class="c-run-summary-left">
+        <div class="c-info-dot" style="background:var(--green-600);margin-top:0;"></div>
+        <div class="c-run-summary-text">
+          Project: <strong id="c-run-project-name">Untitled</strong>
+          &nbsp;·&nbsp; Industry: <span id="c-run-domain">General</span>
+        </div>
+      </div>
+      <button class="c-change-link" onclick="cOpenProjectEdit()">Change</button>
+    </div>
+
+    <!-- Auto-suggestion chips -->
+    <div class="c-auto-chips" id="c-auto-chips" style="display:none"></div>
+
+    <!-- Generate row -->
+    <div class="c-generate-row">
+      <button class="c-generate-btn" id="c-generate-btn" onclick="cGenerate()">
+        <span id="c-generate-icon">▶</span>
+        <span id="c-generate-label">Generate cluster map + diagrams</span>
+      </button>
+      <button class="c-set-btn" id="c-set-btn" onclick="cOpenSet()" title="Run settings">
+        <span>Set</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M6 1v2M6 9v2M1 6h2M9 6h2M2.5 2.5l1.4 1.4M8.1 8.1l1.4 1.4M2.5 9.5l1.4-1.4M8.1 3.9l1.4-1.4"/>
+          <circle cx="6" cy="6" r="2"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="c-generate-caption" id="c-generate-caption">—</div>
+
+    <!-- Pro tool link -->
+    <div class="c-pro-link">
+      Need full pipeline controls?
+      <a href="index.html" target="_blank">Open the Pro tool →</a>
+    </div>
+  </div>
+
+  <!-- ── STEP 3: View ── -->
+  <!-- View has its own wider layout — injected outside .c-panel max-width -->
+
+</main>
+
+<!-- View header + panel (outside c-main to allow full width) -->
+<div id="c-view-section" style="display:none; flex-direction:column; align-items:center; padding: 0 20px 48px;">
+  <div class="c-view-header">
+    <div class="c-view-title-group">
+      <div class="c-view-title" id="c-view-title">—</div>
+      <div class="c-view-meta" id="c-view-meta">—</div>
+    </div>
+    <!-- Map/Diagram toggle (shown when diagrams ready) -->
+    <div class="c-view-toggle" id="c-view-toggle" style="display:none">
+      <button class="c-view-toggle-btn active" id="c-vtab-map" onclick="cSwitchView('map')">
+        ⊞ Map
+      </button>
+      <button class="c-view-toggle-btn" id="c-vtab-diagram" onclick="cSwitchView('diagram')">
+        ⊟ Diagram
+      </button>
+    </div>
+    <!-- Zoom controls (shown when diagram active) -->
+    <div class="c-zoom-group" id="c-zoom-group" style="display:none">
+      <button class="c-zoom-btn" onclick="cZoom(-0.2)" title="Zoom out">−</button>
+      <button class="c-zoom-btn" onclick="cZoom(0.2)" title="Zoom in">+</button>
+      <button class="c-zoom-btn" onclick="cZoomFit()" title="Fit">⤢</button>
+    </div>
+    <div class="c-view-actions">
+      <button class="c-view-btn" onclick="cExport()" id="c-export-btn">↓ Export</button>
+      <button class="c-view-btn" onclick="cShareMap()">⇗ Share</button>
+    </div>
+  </div>
+
+  <!-- Auto-suggestion chips in view header -->
+  <div class="c-auto-chips" id="c-view-auto-chips"
+       style="display:none; width:100%; max-width:860px; margin-bottom:10px;"></div>
+
+  <div class="c-view-panel" id="c-view-panel">
+    <!-- Progress overlay (shown while generating) -->
+    <div class="c-progress-wrap" id="c-progress-wrap">
+      <div class="c-progress-spinner"></div>
+      <div class="c-progress-title" id="c-progress-title">Preparing…</div>
+      <div class="c-progress-subtitle" id="c-progress-subtitle"></div>
+      <div class="c-progress-list" id="c-progress-list">
+        <div class="c-progress-item" id="cp-clean">
+          <div class="c-progress-dot"></div>Cleaning &amp; chunking document
+        </div>
+        <div class="c-progress-item" id="cp-extract">
+          <div class="c-progress-dot"></div>Extracting process clusters
+        </div>
+        <div class="c-progress-item" id="cp-map">
+          <div class="c-progress-dot"></div>Generating cluster map
+        </div>
+        <div class="c-progress-item" id="cp-diagrams">
+          <div class="c-progress-dot"></div>Building chapter diagrams
+        </div>
+      </div>
+    </div>
+
+    <!-- Map view -->
+    <div id="c-map-view" style="display:none">
+      <div class="c-map-grid" id="c-map-grid"></div>
+    </div>
+
+    <!-- Diagram view -->
+    <div id="c-diagram-view" style="display:none">
+      <div class="c-diagram-wrap" id="c-diagram-wrap">
+        <div class="c-diagram-inner" id="c-diagram-inner">
+          <div class="c-diagram-placeholder" id="c-diagram-placeholder">
+            <div class="c-diagram-placeholder-icon">◻</div>
+            <div>Select a process from the Map to view its diagram</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SET POPOVER
+══════════════════════════════════════════════════════════════════ -->
+<div class="c-set-popover" id="c-set-popover" onclick="cCloseSetIfOverlay(event)">
+  <div class="c-set-box" onclick="event.stopPropagation()">
+    <h3>⚙ Run settings</h3>
+
+    <!-- Mode toggle -->
+    <div class="c-set-section">
+      <div class="c-set-label">Mode</div>
+      <div class="c-mode-toggle">
+        <button class="c-mode-btn active" id="c-mode-preview" onclick="cSetMode('preview')">
+          <div class="c-mode-radio"></div>
+          <div class="c-mode-desc">
+            Preview (free)
+            <span>Structure map from TOC — no API calls</span>
+          </div>
+        </button>
+        <button class="c-mode-btn" id="c-mode-pay" onclick="cSetMode('pay')">
+          <div class="c-mode-radio"></div>
+          <div class="c-mode-desc">
+            Full diagrams
+            <span>Complete pipeline with LLM</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- API key (shown only in pay mode when key missing) -->
+    <div class="c-set-section" id="c-apikey-section" style="display:none">
+      <div class="c-set-label">Anthropic API key</div>
+      <input type="password" class="c-set-input" id="c-apikey-input"
+             placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+      <div class="c-set-input-hint">
+        Stored locally in your browser.
+        <a href="https://console.anthropic.com/keys" target="_blank"
+           style="color:var(--green-600)">Get a key →</a>
+      </div>
+    </div>
+
+    <!-- Advanced (collapsed) -->
+    <div class="c-set-section">
+      <button class="c-advanced-toggle" id="c-adv-toggle" onclick="cToggleAdvanced()">
+        Advanced ▾
+      </button>
+      <div class="c-advanced-body" id="c-adv-body">
+        <div class="c-set-row">
+          <div class="c-set-field">
+            <div class="c-set-field-label">Model</div>
+            <select class="c-set-select" id="c-pref-model">
+              <option value="claude-haiku-4-5">Claude Haiku (fast, low cost)</option>
+              <option value="claude-sonnet-4-5" selected>Claude Sonnet (balanced)</option>
+              <option value="claude-opus-4-5">Claude Opus (highest quality)</option>
+            </select>
+          </div>
+          <div class="c-set-field">
+            <div class="c-set-field-label">Style</div>
+            <select class="c-set-select" id="c-pref-style">
+              <option value="auto" selected>Auto-detect</option>
+              <option value="flowchart">Flowchart</option>
+              <option value="swimlane">Swimlane</option>
+              <option value="sequence">Sequence</option>
+            </select>
+          </div>
+        </div>
+        <div class="c-set-row">
+          <div class="c-set-field">
+            <div class="c-set-field-label">Industry / Domain</div>
+            <select class="c-set-select" id="c-pref-domain">
+              <option value="general">General</option>
+              <option value="igaming">iGaming / Casino</option>
+              <option value="finance">Finance / Banking</option>
+              <option value="healthcare">Healthcare</option>
+              <option value="logistics">Logistics / Supply chain</option>
+              <option value="saas">SaaS / Software</option>
+              <option value="legal">Legal / Compliance</option>
+            </select>
+          </div>
+          <div class="c-set-field">
+            <div class="c-set-field-label">Orientation</div>
+            <select class="c-set-select" id="c-pref-orient">
+              <option value="TD">Top → Down</option>
+              <option value="LR" selected>Left → Right</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="c-set-actions">
+      <button class="c-set-cancel" onclick="cCloseSet()">Cancel</button>
+      <button class="c-set-confirm" onclick="cConfirmSet()">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="c-toast"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     DOM SHIM — hidden elements required by pipeline JS modules
+     All reads: getElementById returns the element; most are write-only
+     from the pipeline's perspective and are safe to be hidden.
+══════════════════════════════════════════════════════════════════ -->
+<div id="flowinject-shim" aria-hidden="true">
+  <!-- Core pipeline inputs -->
+  <textarea id="input-text"></textarea>
+  <textarea id="mermaid-editor"></textarea>
+  <input id="apikey" type="password">
+  <input id="gh-pat" type="password">
+  <select id="model-select">
+    <option value="claude-sonnet-4-5" selected>Sonnet</option>
+    <option value="claude-haiku-4-5">Haiku</option>
+    <option value="claude-opus-4-5">Opus</option>
+  </select>
+  <select id="diagram-type">
+    <option value="flowchart" selected>flowchart</option>
+    <option value="swimlane">swimlane</option>
+    <option value="sequence">sequence</option>
+  </select>
+  <select id="lane-orient">
+    <option value="LR" selected>LR</option><option value="TD">TD</option>
+  </select>
+  <select id="layout-engine">
+    <option value="dagre" selected>dagre</option><option value="elk">elk</option>
+  </select>
+  <select id="domain-preset">
+    <option value="general" selected>general</option>
+    <option value="igaming">igaming</option>
+  </select>
+  <input id="gh-project" type="text">
+  <input type="checkbox" id="chunked-mode">
+  <input type="checkbox" id="two-pass-btn" checked>
+
+  <!-- Rendering targets (pipeline writes SVG here) -->
+  <div id="chart-inner"></div>
+  <div id="chart-viewport"></div>
+  <div id="graph-controls"></div>
+
+  <!-- Loading / status indicators -->
+  <div id="spinner" style="display:none"><div id="spinner-msg"></div></div>
+  <div id="placeholder"></div>
+  <div id="error-box"></div>
+  <div id="render-error"></div>
+  <div id="api-status"></div>
+  <div id="pipeline-status"></div>
+
+  <!-- Toast (shim — real toast is #c-toast) -->
+  <div id="toast"></div>
+
+  <!-- Share overlay (shim — consumer has its own share) -->
+  <div id="share-banner" style="display:none">
+    <h4 id="share-banner-h4"></h4>
+    <input id="share-url" type="text" readonly>
+    <div class="share-btns"></div>
+  </div>
+
+  <!-- Chunk / progress bars -->
+  <div id="chunk-progress"></div>
+  <div id="chunk-progress-bar"></div>
+  <div id="chunk-progress-status"></div>
+  <div id="chunk-progress-title"></div>
+
+  <!-- Pipeline output panels (write-only) -->
+  <div id="raw-meta"></div>
+  <div id="clean-viewer"></div>
+  <div id="clean-meta"></div>
+  <div id="clean-empty"></div>
+  <div id="chunk-list"></div>
+  <div id="chunks-meta"></div>
+  <div id="chunks-empty"></div>
+  <div id="preparse-content"></div>
+  <div id="preparse-list"></div>
+  <div id="preparse-meta"></div>
+  <div id="preparse-empty"></div>
+  <div id="analysis-content"></div>
+  <div id="analysis-meta"></div>
+  <div id="analysis-empty"></div>
+  <div id="analysis-dashboard-root"></div>
+
+  <!-- Pipeline control buttons (called .click() on by pipeline) -->
+  <button id="convert-btn"></button>
+  <button id="pipeline-only-btn"></button>
+  <button id="btn-pass1-rerun"></button>
+  <button id="btn-copy-clean"></button>
+  <button id="btn-copy-preparse"></button>
+  <button id="btn-export-preparse-csv"></button>
+  <button id="btn-export-preparse-print"></button>
+  <button id="action-export-btn"></button>
+
+  <!-- Pro-tool-only UI elements (safe to be no-op stubs) -->
+  <div id="fname"></div>
+  <div id="filename-tag"></div>
+  <div id="doc-stats"></div>
+  <div id="drop-hint"></div>
+  <div id="entity-summary"></div>
+  <div id="preflight-bar"></div>
+  <div id="validation-bar"></div>
+  <div id="refine-bar"></div>
+  <input id="refine-input" type="text">
+  <div id="toc-banner"></div>
+  <div id="toc-banner-count"></div>
+  <div id="toc-banner-clusters"></div>
+  <div id="swimlane-preview"></div>
+  <div id="diagram-suggestion"></div>
+  <div id="diagram-controls-bar"></div>
+  <div id="session-cost"></div>
+  <div id="thinking-indicator"></div>
+  <div id="actor-pills"></div>
+  <div id="dc-actor-pills"></div>
+  <div id="dc-actors-group"></div>
+  <div id="dc-apply-actors"></div>
+  <div id="intel-flag-grid"></div>
+  <div id="keyword-list"></div>
+  <div id="an-map-diagram"></div>
+  <div id="an-pill-bar"></div>
+  <div id="an-entity-list"></div>
+  <div id="cmap-container"></div>
+  <div id="an-content"></div>
+  <div id="graveyard-body"></div>
+  <div id="graveyard-list"></div>
+  <div id="graveyard-meta"></div>
+  <div id="graveyard-counts"></div>
+  <div id="graveyard-section"></div>
+  <button id="graveyard-toggle"></button>
+  <div id="pass1-editor-section"></div>
+  <div id="pass1-step-list"></div>
+  <input id="pass1-step-count" type="number" value="10">
+  <div id="btn-pass1-rerun"></div>
+  <div id="detail-level-wrap"></div>
+  <div id="pipe-diff-section"></div>
+  <div id="pipe-diff-body"></div>
+  <div id="pipe-diff-rows"></div>
+  <div id="pipe-diff-summary"></div>
+  <button id="pipe-diff-toggle"></button>
+  <div id="pf-calls"></div>
+  <div id="pf-cost"></div>
+  <div id="pf-model"></div>
+  <div id="pf-tokens"></div>
+  <div id="pf-twopass-badge"></div>
+  <div id="prompt-editor-toggle"></div>
+  <div id="prompt-editor-body"></div>
+  <textarea id="prompt-preview"></textarea>
+  <input id="chart-name-input" type="text">
+  <div id="save-dialog"></div>
+  <select id="save-parent-slug-select"></select>
+  <div id="save-subprocess-row"></div>
+  <select id="save-type-override"></select>
+  <div id="saved-list"></div>
+  <div id="history-list"></div>
+  <div id="glossary-list"></div>
+  <input id="g-search" type="text">
+  <input id="g-filter-domain" type="text">
+  <input id="g-filter-type" type="text">
+  <div id="g-toolbar-terms"></div>
+  <div id="g-add-form-container"></div>
+  <div id="g-panel-output"></div>
+  <input id="gf-term" type="text">
+  <input id="gf-type" type="text">
+  <input id="gf-domain" type="text">
+  <input id="gf-expansion" type="text">
+  <div id="og-template-list"></div>
+  <div id="og-search"></div>
+  <div id="og-add-form-container"></div>
+  <input id="ogf-name" type="text">
+  <input id="ogf-dtype" type="text">
+  <input id="ogf-domain" type="text">
+  <input id="ogf-sequence" type="text">
+  <div id="learn-banner"></div>
+  <div id="learn-terms-list"></div>
+  <input id="stg-apikey-save" type="text">
+  <input id="stg-pat-save" type="text">
+  <div id="settings-gear-btn"></div>
+  <div id="settings-popover"></div>
+  <div id="gh-sync-btn"></div>
+  <div id="gh-status"></div>
+  <div id="zoom-level"></div>
+  <div id="zoom-level-b"></div>
+  <div id="split-toggle"></div>
+  <div id="split-overlay"></div>
+  <div id="split-placeholder-b"></div>
+  <div id="mermaid-editor-b"></div>
+  <div id="chart-inner-b"></div>
+  <div id="chart-b-picker"></div>
+  <div id="chart-b-picker-list"></div>
+  <div id="action-export-wrap"></div>
+  <div id="action-export-menu"></div>
+  <div id="action-save"></div>
+  <div id="action-share"></div>
+  <div id="action-load"></div>
+  <div id="action-clear"></div>
+  <div id="action-render"></div>
+  <div id="action-export-btn-wrap"></div>
+  <div id="rtab-analysis"></div>
+  <div id="rpane-analysis"></div>
+  <div id="rpane-graph"></div>
+  <div id="rpane-code"></div>
+  <div id="cm-editor-wrap"></div>
+  <div id="header-version-badge"></div>
+  <div id="logic-version-badge"></div>
+  <div id="logic-changelog"></div>
+  <div id="logic-snapshot-area"></div>
+  <div id="logic-snap-status"></div>
+  <div id="logic-tag-tbody"></div>
+  <div id="logic-token-log"></div>
+  <div id="logic-token-log-content"></div>
+  <div id="export-dialog"></div>
+  <input id="exp-title" type="text">
+  <input id="exp-subtitle" type="text">
+  <select id="exp-format"></select>
+  <div id="print-area"></div>
+  <div id="print-svg"></div>
+  <div id="print-title"></div>
+  <div id="print-meta"></div>
+  <div id="node-edit-overlay"></div>
+  <input id="node-edit-input" type="text">
+  <div id="shortcuts-popup"></div>
+  <div id="autosave-indicator"></div>
+  <div id="project-dialog"></div>
+  <input id="project-name-input" type="text">
+  <div id="project-dialog-sub"></div>
+  <div id="gtier-global-count"></div>
+  <div id="gtier-project-count"></div>
+  <div id="gtier-output-count"></div>
+  <div id="entity-summary"></div>
+  <div id="doc-stats"></div>
+  <div id="learn-banner"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     PIPELINE JS MODULES (unmodified)
+══════════════════════════════════════════════════════════════════ -->
+<script src="js/storage.js"></script>
+<script src="js/pipeline.js"></script>
+<script src="js/generate.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     CONSUMER ADAPTER
+     Loaded AFTER all js/ modules so it can wrap their functions.
+══════════════════════════════════════════════════════════════════ -->
+<script>
+// ════════════════════════════════════════════════════════════════════
+// Consumer state
+// ════════════════════════════════════════════════════════════════════
+var CS = {
+  step:         1,       // current wizard step
+  mode:         'pay',   // 'preview' | 'pay'
+  file:         null,    // File object
+  fileText:     null,    // decoded string
+  fileName:     '',
+  fileSize:     0,
+  filePages:    0,
+  hasToc:       false,
+  clusterCount: 0,
+  projectName:  'Untitled project',
+  domain:       'general',
+  domainLabel:  'General',
+  model:        'claude-sonnet-4-5',
+  style:        'auto',
+  orient:       'LR',
+  generating:   false,
+  currentView:  'map',   // 'map' | 'diagram'
+  zoom:         1.0,
+  diagrams:     [],      // [{slug, name, steps, type, clusterIcon, clusterColor, code}]
+  activeDiagram: null,
+  autoHints:    [],      // [{id, text, field}]
+  dismissedHints: [],
+};
+
+// Persist preferences across loads
+var C_PREFS_KEY = 'fc_consumer_prefs';
+(function loadPrefs() {
+  try {
+    var saved = JSON.parse(localStorage.getItem(C_PREFS_KEY) || '{}');
+    if (saved.mode)   CS.mode   = saved.mode;
+    if (saved.model)  CS.model  = saved.model;
+    if (saved.style)  CS.style  = saved.style;
+    if (saved.orient) CS.orient = saved.orient;
+    if (saved.domain) { CS.domain = saved.domain; CS.domainLabel = _domainLabel(saved.domain); }
+  } catch(e) {}
+})();
+
+function _savePrefs() {
+  try {
+    localStorage.setItem(C_PREFS_KEY, JSON.stringify({
+      mode:   CS.mode,
+      model:  CS.model,
+      style:  CS.style,
+      orient: CS.orient,
+      domain: CS.domain,
+    }));
+  } catch(e) {}
+}
+
+// ── Intercept pipeline functions ──────────────────────────────────
+// Wrap setLoading to drive the consumer progress list
+var _origSetLoading = window.setLoading;
+window.setLoading = function(on, msg) {
+  if (_origSetLoading) _origSetLoading(on, msg);
+  if (on && msg) _consumerProgress(msg);
+  if (!on && CS.generating) {
+    // pipeline finished a stage — check if we should advance
+  }
+};
+
+// Wrap showToast to use the consumer toast
+var _origShowToast = window.showToast;
+window.showToast = function(msg) {
+  _cToast(msg);
+};
+
+// Wrap switchRightTab / renderAnalysisDashboard to be no-ops in consumer
+window.switchRightTab = function() {};
+window.renderAnalysisDashboard = function() {};
+window.renderSavedList = function() {};
+window.renderHistoryList = function() {};
+window.renderGlossary = function() {};
+window.renderLogicTab = function() {};
+window.renderProjectSelector = function() { _syncProjectSelector(); };
+
+// ── Stage → progress list mapping ─────────────────────────────────
+var C_STAGES = ['cp-clean', 'cp-extract', 'cp-map', 'cp-diagrams'];
+var C_STAGE_IDX = 0;
+
+var C_STAGE_MAP = [
+  { id: 'cp-clean',    keys: ['clean','chunk','read','pre-pars','prepars','preparse','stage 1','stage 2','stage 3','stage 4'] },
+  { id: 'cp-extract',  keys: ['extract','pass 1','pass1','pre-pass','prepass','decision','entities','coverage'] },
+  { id: 'cp-map',      keys: ['pass 2','pass2','graph','mermaid','cluster map','generat','diagram'] },
+  { id: 'cp-diagrams', keys: ['chapter','inject','saving','saved','colour','render','complete'] },
+];
+
+function _consumerProgress(msg) {
+  if (!msg) return;
+  var lower = msg.toLowerCase();
+
+  // Update progress title in the view panel
+  var title = document.getElementById('c-progress-title');
+  if (title) title.textContent = _friendlyMsg(msg);
+
+  // Find the best matching stage
+  var matched = -1;
+  for (var i = 0; i < C_STAGE_MAP.length; i++) {
+    var stage = C_STAGE_MAP[i];
+    for (var j = 0; j < stage.keys.length; j++) {
+      if (lower.indexOf(stage.keys[j]) !== -1) {
+        matched = i;
+        break;
+      }
+    }
+    if (matched !== -1) break;
+  }
+  if (matched === -1) return;
+
+  // Advance stage (never go backward)
+  if (matched <= C_STAGE_IDX && C_STAGE_IDX > 0) return;
+  C_STAGE_IDX = matched;
+
+  C_STAGES.forEach(function(id, idx) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('done', 'active');
+    if (idx < matched)       el.classList.add('done');
+    else if (idx === matched) el.classList.add('active');
+  });
+}
+
+var C_FRIENDLY = [
+  [/pre-pass|prepass/i,         'Pre-pass — identifying decisions…'],
+  [/pass 1|pass1/i,             'Extracting process structure…'],
+  [/pass 2|pass2/i,             'Building graph model…'],
+  [/generat.*flowchart|generat.*swimlane|generat.*sequence/i, 'Generating diagram…'],
+  [/clean/i,                    'Cleaning document…'],
+  [/chunk/i,                    'Splitting into chunks…'],
+  [/retry/i,                    'Retrying…'],
+  [/API busy/i,                 'API busy — retrying…'],
+];
+
+function _friendlyMsg(msg) {
+  for (var i = 0; i < C_FRIENDLY.length; i++) {
+    if (C_FRIENDLY[i][0].test(msg)) return C_FRIENDLY[i][1];
+  }
+  return msg.length > 60 ? msg.substring(0, 57) + '…' : msg;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Consumer toast
+// ════════════════════════════════════════════════════════════════════
+var _cToastTimer = null;
+function _cToast(msg) {
+  var t = document.getElementById('c-toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_cToastTimer);
+  _cToastTimer = setTimeout(function() { t.classList.remove('show'); }, 2800);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Step navigation
+// ════════════════════════════════════════════════════════════════════
+function cGoStep(n) {
+  CS.step = n;
+  [1,2].forEach(function(i) {
+    var panel = document.getElementById('cpanel-' + i);
+    if (panel) panel.classList.toggle('active', i === n);
+  });
+
+  // Step 3 lives outside c-main
+  var viewSection = document.getElementById('c-view-section');
+  var mainEl      = document.getElementById('c-main');
+  if (n === 3) {
+    mainEl.style.display      = 'none';
+    viewSection.style.display = 'flex';
+  } else {
+    mainEl.style.display      = 'flex';
+    viewSection.style.display = 'none';
+  }
+
+  // Update stepper
+  [1,2,3].forEach(function(i) {
+    var stepEl = document.getElementById('cstep-' + i);
+    var lineEl = document.getElementById('cline-' + i);
+    if (!stepEl) return;
+    stepEl.classList.remove('active', 'done');
+    if (i < n)       stepEl.classList.add('done');
+    else if (i === n) stepEl.classList.add('active');
+    if (lineEl) lineEl.classList.toggle('done', i < n);
+    // Swap number vs checkmark
+    var numSpan = stepEl.querySelector('.c-step-num span');
+    if (numSpan) numSpan.style.display = i < n ? 'none' : '';
+  });
+
+  // "New chart" button visibility
+  var newBtn = document.getElementById('c-new-btn');
+  if (newBtn) newBtn.style.display = n > 1 ? '' : 'none';
+
+  if (n === 2) _populateRunSummary();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Step 1 — File handling
+// ════════════════════════════════════════════════════════════════════
+function cOnDragOver(e) {
+  e.preventDefault();
+  document.getElementById('c-dropzone').classList.add('drag-over');
+}
+function cOnDragLeave(e) {
+  document.getElementById('c-dropzone').classList.remove('drag-over');
+}
+function cOnDrop(e) {
+  e.preventDefault();
+  document.getElementById('c-dropzone').classList.remove('drag-over');
+  var f = e.dataTransfer.files[0];
+  if (f) _loadFile(f);
+}
+function cOnFileSelect(e) {
+  var f = e.target.files[0];
+  if (f) _loadFile(f);
+  e.target.value = '';
+}
+
+function _loadFile(file) {
+  CS.file     = file;
+  CS.fileName = file.name;
+  CS.fileSize = file.size;
+  _hideEl('c-load-error');
+  _showEl('c-file-card');
+
+  // Show file card immediately
+  document.getElementById('c-file-name').textContent = file.name;
+  document.getElementById('c-file-meta').textContent = _fmtSize(file.size);
+  document.getElementById('c-file-icon').textContent = _fileIcon(file.name);
+  document.getElementById('c-run-file-icon').textContent = _fileIcon(file.name);
+  document.getElementById('c-run-file-name').textContent = file.name;
+
+  // Use the existing handleFile machinery through the shim textarea
+  _readFileText(file).then(function(text) {
+    CS.fileText = text;
+
+    // Feed into pipeline shim
+    var inputEl = document.getElementById('input-text');
+    if (inputEl) inputEl.value = text;
+
+    // Run pre-parse pipeline stages only (no LLM)
+    _runPrePipeline(text, file);
+  }).catch(function(err) {
+    _showEl('c-load-error');
+    document.getElementById('c-load-error-msg').textContent = 'Could not read file: ' + err.message;
+  });
+}
+
+async function _readFileText(file) {
+  var ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'pdf') {
+    return await _readPdf(file);
+  } else if (ext === 'docx') {
+    return await _readDocx(file);
+  } else {
+    return await file.text();
+  }
+}
+
+async function _readPdf(file) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js not loaded');
+  var buf  = await file.arrayBuffer();
+  var pdf  = await pdfjsLib.getDocument({ data: buf }).promise;
+  CS.filePages = pdf.numPages;
+  document.getElementById('c-file-meta').textContent =
+    _fmtSize(file.size) + ' · ' + pdf.numPages + ' pages';
+  var pages = [];
+  for (var i = 1; i <= Math.min(pdf.numPages, 300); i++) {
+    var page    = await pdf.getPage(i);
+    var content = await page.getTextContent();
+    pages.push(content.items.map(function(it) { return it.str; }).join(' '));
+  }
+  return pages.join('\n');
+}
+
+async function _readDocx(file) {
+  if (typeof mammoth === 'undefined') throw new Error('mammoth.js not loaded');
+  var buf    = await file.arrayBuffer();
+  var result = await mammoth.extractRawText({ arrayBuffer: buf });
+  return result.value;
+}
+
+function _runPrePipeline(text, file) {
+  try {
+    // Run preParse via the pipeline module
+    if (typeof preParse === 'function') {
+      pipe.raw  = text;
+      pipe.clean = typeof cleanText === 'function' ? cleanText(text) : text;
+      var preparsed = preParse(pipe.clean || text);
+      pipe.preparsed = preparsed;
+    }
+
+    // Detect TOC
+    var toc = null;
+    if (typeof detectTOC === 'function') {
+      toc = detectTOC(text);
+      pipe._currentToc = toc;
+    }
+    CS.hasToc = toc && toc.detected;
+    CS.clusterCount = CS.hasToc ? _countClusters(toc) : 0;
+
+    // Auto-detect project name
+    var projName = null;
+    if (typeof detectProjectFromDocument === 'function' && pipe.preparsed) {
+      projName = detectProjectFromDocument(text, pipe.preparsed);
+    }
+    if (!projName) projName = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+    projName = projName.substring(0, 60).trim();
+    _setProjectName(projName);
+
+    // Auto-detect domain
+    var detectedDomain = _detectDomain(text);
+    if (detectedDomain && detectedDomain !== CS.domain) {
+      CS.domain      = detectedDomain.slug;
+      CS.domainLabel = detectedDomain.label;
+      _addAutoHint('domain', 'Industry: ' + detectedDomain.label + ' detected', 'domain');
+    }
+
+    // Show domain chip
+    var chip = document.getElementById('c-domain-chip');
+    chip.textContent = CS.domainLabel;
+    chip.style.display = '';
+
+    // Show TOC info box
+    if (CS.hasToc) {
+      document.getElementById('c-toc-msg').textContent =
+        'Table of contents detected — ' + CS.clusterCount + ' process cluster' +
+        (CS.clusterCount !== 1 ? 's' : '') + ' found. FlowInject will generate a cluster map first, then individual diagrams per chapter.';
+      _showEl('c-toc-box');
+    } else {
+      _hideEl('c-toc-box');
+    }
+
+    // Auto-suggest style for swimlane
+    var hasManyActors = pipe.preparsed && pipe.preparsed.filter(function(p) {
+      return p.type === 'actor' || p.type === 'lane';
+    }).length > 2;
+    if (hasManyActors && CS.style === 'auto') {
+      _addAutoHint('style', 'Auto: swimlane selected (multiple actors detected)', 'style');
+    }
+
+    // Sync shim selects with current preferences
+    _applyPrefsToShim();
+
+    // ChapterRegistry sync
+    if (typeof ChapterRegistry !== 'undefined' && toc && toc.detected) {
+      ChapterRegistry.load(toc);
+    }
+
+    // Show scroll hint to advance
+    _showEl('c-scroll-hint-1');
+
+    // Auto-advance to step 2 after short delay
+    setTimeout(function() { cGoStep(2); }, 800);
+
+  } catch(err) {
+    console.warn('Pre-pipeline error:', err);
+    // Still advance — non-fatal
+    _showEl('c-scroll-hint-1');
+    setTimeout(function() { cGoStep(2); }, 400);
+  }
+}
+
+function _countClusters(toc) {
+  if (!toc || !toc.entries) return 0;
+  var clusters = {};
+  toc.entries.forEach(function(e) {
+    if (e.cluster) clusters[e.cluster] = true;
+  });
+  var count = Object.keys(clusters).length;
+  return count || toc.entries.filter(function(e) { return e.level === 1; }).length;
+}
+
+function cRemoveFile() {
+  CS.file = CS.fileText = null;
+  CS.fileName = ''; CS.fileSize = 0; CS.hasToc = false; CS.clusterCount = 0;
+  _hideEl('c-file-card'); _hideEl('c-toc-box'); _hideEl('c-scroll-hint-1'); _hideEl('c-load-error');
+  document.getElementById('c-file-input').value = '';
+}
+
+function _setProjectName(name) {
+  CS.projectName = name;
+  document.getElementById('c-project-name').textContent = name;
+  document.getElementById('c-run-project-name').textContent = name;
+  document.getElementById('c-view-title').textContent = name;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Domain auto-detection
+// ════════════════════════════════════════════════════════════════════
+var C_DOMAINS = [
+  { slug: 'igaming',    label: 'iGaming CS',    keys: ['casino','gaming','igaming','sportsbook','bet','bonus','withdrawal','player','kyc','aml'] },
+  { slug: 'finance',    label: 'Finance',        keys: ['banking','financial','credit','loan','compliance','risk','aml','kyc','ledger','payment'] },
+  { slug: 'healthcare', label: 'Healthcare',     keys: ['patient','clinical','hospital','diagnosis','treatment','healthcare','medical','ehr'] },
+  { slug: 'logistics',  label: 'Logistics',      keys: ['shipment','warehouse','freight','carrier','delivery','supply chain','inventory'] },
+  { slug: 'saas',       label: 'SaaS',           keys: ['subscription','api','endpoint','saas','onboarding','tenant','webhook','billing'] },
+  { slug: 'legal',      label: 'Legal',          keys: ['contract','clause','regulation','compliance','gdpr','legal','litigation','jurisdiction'] },
+];
+
+function _detectDomain(text) {
+  var sample = (text || '').substring(0, 3000).toLowerCase();
+  var best = null; var bestScore = 0;
+  C_DOMAINS.forEach(function(d) {
+    var score = d.keys.reduce(function(n, k) { return n + (sample.indexOf(k) !== -1 ? 1 : 0); }, 0);
+    if (score > bestScore) { bestScore = score; best = d; }
+  });
+  return bestScore >= 2 ? best : null;
+}
+
+function _domainLabel(slug) {
+  var found = C_DOMAINS.find(function(d) { return d.slug === slug; });
+  return found ? found.label : 'General';
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Auto-suggestion chips
+// ════════════════════════════════════════════════════════════════════
+function _addAutoHint(id, text, field) {
+  if (CS.dismissedHints.indexOf(id) !== -1) return;
+  var existing = CS.autoHints.find(function(h) { return h.id === id; });
+  if (!existing) CS.autoHints.push({ id: id, text: text, field: field });
+  _renderAutoChips();
+}
+
+function _renderAutoChips() {
+  var undismissed = CS.autoHints.filter(function(h) {
+    return CS.dismissedHints.indexOf(h.id) === -1;
+  });
+  var containers = ['c-auto-chips', 'c-view-auto-chips'];
+  containers.forEach(function(cid) {
+    var el = document.getElementById(cid);
+    if (!el) return;
+    if (!undismissed.length) { el.style.display = 'none'; return; }
+    el.style.display = 'flex';
+    el.innerHTML = undismissed.map(function(h) {
+      return '<div class="c-auto-chip" onclick="cOpenSet()">' +
+        'Auto: ' + h.text +
+        '<button class="c-auto-chip-dismiss" onclick="event.stopPropagation();cDismissHint(\'' + h.id + '\')" title="Dismiss">✕</button>' +
+      '</div>';
+    }).join('');
+  });
+}
+
+function cDismissHint(id) {
+  CS.dismissedHints.push(id);
+  _renderAutoChips();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Step 2 — Run summary
+// ════════════════════════════════════════════════════════════════════
+function _populateRunSummary() {
+  document.getElementById('c-run-project-name').textContent = CS.projectName;
+  document.getElementById('c-run-domain').textContent       = CS.domainLabel;
+
+  // TOC chip in run card
+  var tocChip = document.getElementById('c-run-toc-chip');
+  if (CS.hasToc && CS.clusterCount) {
+    tocChip.innerHTML = '&nbsp;&nbsp;<span style="font-size:11px;color:var(--green-700);' +
+      'background:var(--green-50);border:1px solid var(--green-200);' +
+      'border-radius:20px;padding:2px 8px;font-weight:600;">' +
+      'TOC · ' + CS.clusterCount + ' clusters</span>';
+    tocChip.style.display = '';
+  } else {
+    tocChip.style.display = 'none';
+  }
+
+  // Generate button label + caption
+  _updateGenerateBtn();
+  _renderAutoChips();
+}
+
+function _updateGenerateBtn() {
+  var btn     = document.getElementById('c-generate-btn');
+  var label   = document.getElementById('c-generate-label');
+  var caption = document.getElementById('c-generate-caption');
+  var setBtn  = document.getElementById('c-set-btn');
+
+  var hasKey = !!(localStorage.getItem('fc_apikey') || '').trim();
+
+  if (CS.mode === 'preview') {
+    btn.className     = 'c-generate-btn preview-mode';
+    label.textContent = 'Preview structure map (free)';
+    caption.textContent = 'TOC structure only — no API calls required';
+  } else {
+    btn.className = 'c-generate-btn';
+    if (CS.hasToc && CS.clusterCount > 0) {
+      label.textContent   = 'Generate cluster map + diagrams';
+      var mins = Math.max(1, Math.ceil(CS.clusterCount * 0.35));
+      var cost = (CS.clusterCount * 0.04).toFixed(2);
+      caption.textContent = 'Map + ' + CS.clusterCount + ' diagrams · approx. ' +
+        mins + '–' + (mins + 1) + ' min · ~$' + cost;
+    } else {
+      label.textContent   = 'Generate diagram';
+      caption.textContent = 'Single process · approx. 30–60 sec · ~$0.02';
+    }
+  }
+
+  // Set button indicator
+  if (hasKey) setBtn.classList.add('has-key');
+  else        setBtn.classList.remove('has-key');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Set popover
+// ════════════════════════════════════════════════════════════════════
+function cOpenSet() {
+  // Populate from current CS state
+  var modePreview = document.getElementById('c-mode-preview');
+  var modePay     = document.getElementById('c-mode-pay');
+  modePreview.classList.toggle('active', CS.mode === 'preview');
+  modePay.classList.toggle('active',     CS.mode === 'pay');
+
+  document.getElementById('c-pref-model').value  = CS.model;
+  document.getElementById('c-pref-style').value  = CS.style;
+  document.getElementById('c-pref-domain').value = CS.domain;
+  document.getElementById('c-pref-orient').value = CS.orient;
+
+  // API key section: show only in pay mode when key missing
+  var hasKey = !!(localStorage.getItem('fc_apikey') || '').trim();
+  _toggleApikeySection(CS.mode === 'pay' && !hasKey);
+
+  document.getElementById('c-set-popover').classList.add('open');
+}
+
+function cCloseSet() {
+  document.getElementById('c-set-popover').classList.remove('open');
+}
+
+function cCloseSetIfOverlay(e) {
+  if (e.target === document.getElementById('c-set-popover')) cCloseSet();
+}
+
+function cSetMode(mode) {
+  CS.mode = mode;
+  document.getElementById('c-mode-preview').classList.toggle('active', mode === 'preview');
+  document.getElementById('c-mode-pay').classList.toggle('active',     mode === 'pay');
+  var hasKey = !!(localStorage.getItem('fc_apikey') || '').trim();
+  _toggleApikeySection(mode === 'pay' && !hasKey);
+}
+
+function _toggleApikeySection(show) {
+  var sec = document.getElementById('c-apikey-section');
+  if (sec) sec.style.display = show ? '' : 'none';
+}
+
+function cToggleAdvanced() {
+  var body = document.getElementById('c-adv-body');
+  body.classList.toggle('open');
+  var btn = document.getElementById('c-adv-toggle');
+  btn.textContent = body.classList.contains('open') ? 'Advanced ▴' : 'Advanced ▾';
+}
+
+function cConfirmSet() {
+  // Save API key if entered
+  var keyInput = document.getElementById('c-apikey-input');
+  if (keyInput && keyInput.value.trim()) {
+    var k = keyInput.value.trim();
+    localStorage.setItem('fc_apikey', k);
+    var shimKey = document.getElementById('apikey');
+    if (shimKey) shimKey.value = k;
+    keyInput.value = '';
+    _cToast('API key saved');
+  }
+
+  // Read prefs
+  CS.model  = document.getElementById('c-pref-model').value;
+  CS.style  = document.getElementById('c-pref-style').value;
+  CS.orient = document.getElementById('c-pref-orient').value;
+  var newDomain = document.getElementById('c-pref-domain').value;
+  if (newDomain !== CS.domain) {
+    CS.domain      = newDomain;
+    CS.domainLabel = _domainLabel(newDomain);
+    // If user explicitly set domain, dismiss the auto hint
+    cDismissHint('domain');
+  }
+
+  _savePrefs();
+  _applyPrefsToShim();
+  cCloseSet();
+  _updateGenerateBtn();
+  _populateRunSummary();
+}
+
+function _applyPrefsToShim() {
+  // Model
+  var modelEl = document.getElementById('model-select');
+  if (modelEl) modelEl.value = CS.model;
+
+  // Diagram type (style)
+  var styleVal = CS.style === 'auto' ? _autoDetectStyle() : CS.style;
+  var dtypeEl  = document.getElementById('diagram-type');
+  if (dtypeEl) dtypeEl.value = styleVal;
+
+  // Orientation
+  var orientEl = document.getElementById('lane-orient');
+  if (orientEl) orientEl.value = CS.orient;
+
+  // Domain
+  var domainEl = document.getElementById('domain-preset');
+  if (domainEl) {
+    // Map consumer domain slugs to pipeline domain slugs
+    var mapping = { igaming: 'igaming', finance: 'finance', healthcare: 'general',
+                    logistics: 'general', saas: 'general', legal: 'general', general: 'general' };
+    domainEl.value = mapping[CS.domain] || 'general';
+  }
+
+  // API key
+  var k = localStorage.getItem('fc_apikey') || '';
+  var keyEl = document.getElementById('apikey');
+  if (keyEl) keyEl.value = k;
+
+  // Always use 2-pass for consumer full mode
+  var tpBtn = document.getElementById('two-pass-btn');
+  if (tpBtn) tpBtn.checked = (CS.mode === 'pay');
+}
+
+function _autoDetectStyle() {
+  // Heuristic: if many actors detected → swimlane, else flowchart
+  if (pipe.preparsed) {
+    var actors = pipe.preparsed.filter(function(p) { return p.type === 'actor' || p.type === 'lane'; });
+    if (actors.length > 2) return 'swimlane';
+  }
+  return 'flowchart';
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Project edit (header breadcrumb)
+// ════════════════════════════════════════════════════════════════════
+function cOpenProjectEdit() {
+  var el = document.getElementById('c-project-name');
+  el.contentEditable = 'true';
+  el.focus();
+  var range = document.createRange();
+  range.selectNodeContents(el);
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  el.onblur = function() {
+    el.contentEditable = 'false';
+    var name = el.textContent.trim() || 'Untitled project';
+    _setProjectName(name);
+    _populateRunSummary();
+  };
+  el.onkeydown = function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+    if (e.key === 'Escape') { el.textContent = CS.projectName; el.blur(); }
+  };
+}
+
+document.getElementById('c-project-name').addEventListener('click', cOpenProjectEdit);
+
+// ════════════════════════════════════════════════════════════════════
+// Generate
+// ════════════════════════════════════════════════════════════════════
+async function cGenerate() {
+  if (CS.generating) return;
+  if (!CS.fileText) { _cToast('Load a document first'); return; }
+
+  // Check API key for pay mode
+  if (CS.mode === 'pay') {
+    var k = localStorage.getItem('fc_apikey') || '';
+    if (!k.trim()) {
+      _cToast('Add your API key in Set settings');
+      cOpenSet();
+      return;
+    }
+  }
+
+  CS.generating  = true;
+  C_STAGE_IDX    = 0;
+  CS.diagrams    = [];
+  CS.activeDiagram = null;
+
+  // Ensure shim is up to date
+  _applyPrefsToShim();
+
+  // Set project in pipeline
+  if (typeof currentProject !== 'undefined') {
+    var slug = CS.projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    window.currentProject = { name: CS.projectName, slug: slug };
+    var ghSel = document.getElementById('gh-project');
+    if (ghSel) ghSel.value = slug;
+  }
+
+  // Transition to step 3
+  cGoStep(3);
+  _showProgress(true);
+  _hideEl('c-map-view');
+  _hideEl('c-diagram-view');
+
+  var subtitle = document.getElementById('c-progress-subtitle');
+  var viewMeta = document.getElementById('c-view-meta');
+  viewMeta.textContent = (CS.hasToc ? 'Cluster map · ' + CS.clusterCount + ' processes' : 'Single process') +
+    ' · ' + CS.domainLabel;
+
+  if (CS.mode === 'preview') {
+    // Preview mode: deterministic only — build structure from TOC + preParse
+    subtitle.textContent = 'Building structure from table of contents…';
+    // Advance all 4 stages visually as fast steps
+    _advanceProgressTo(0);
+    await _sleep(300);
+    _advanceProgressTo(1);
+    await _sleep(300);
+    _advanceProgressTo(2);
+    _buildPreviewMap();
+    _advanceProgressTo(3);
+    await _sleep(200);
+    _showPreviewComplete();
+  } else {
+    // Pay mode: full pipeline
+    subtitle.textContent = CS.hasToc
+      ? 'Approx. ' + Math.max(1, Math.ceil(CS.clusterCount * 0.35)) + '–' + (Math.max(1, Math.ceil(CS.clusterCount * 0.35)) + 1) + ' minutes for full project'
+      : 'Approx. 30–60 seconds';
+    _advanceProgressTo(0);
+    try {
+      await _runFullPipeline();
+    } catch(err) {
+      console.error('Pipeline error:', err);
+      _cToast('Generation failed: ' + err.message);
+      CS.generating = false;
+      cGoStep(2);
+      return;
+    }
+  }
+
+  CS.generating = false;
+}
+
+async function _runFullPipeline() {
+  // Use the existing smartAction / convert pipeline
+  // Feed text into shim textarea
+  var inputEl = document.getElementById('input-text');
+  if (inputEl) inputEl.value = CS.fileText || '';
+
+  // Run via the existing pipeline function
+  // smartAction() decides whether to run pipeline first or go straight to convert
+  if (typeof smartAction === 'function') {
+    await smartAction();
+  } else if (typeof runPipeline === 'function') {
+    await runPipeline();
+    if (typeof convert === 'function') await convert();
+  }
+
+  // After pipeline, read results and populate the map
+  _afterPipelineComplete();
+}
+
+function _afterPipelineComplete() {
+  // Mark all stages done
+  C_STAGES.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.classList.remove('active'); el.classList.add('done'); }
+  });
+
+  // Build diagram cards from getSaved()
+  _buildPayMapCards();
+  _showPayComplete();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Preview mode: structure map from TOC
+// ════════════════════════════════════════════════════════════════════
+function _buildPreviewMap() {
+  var toc     = pipe._currentToc || { detected: false, entries: [] };
+  var entries = (toc.entries || []).filter(function(e) { return e.level === 1; });
+
+  if (!entries.length && pipe.preparsed) {
+    entries = pipe.preparsed.filter(function(p) {
+      return p.type === 'heading' || p.type === 'cluster';
+    }).slice(0, 12).map(function(p, i) {
+      return { title: p.text, level: 1, cluster: String(i+1) };
+    });
+  }
+
+  CS.diagrams = entries.map(function(e, i) {
+    return {
+      slug:         slugify(e.title || ('cluster-' + i)),
+      name:         e.title || ('Process ' + (i + 1)),
+      steps:        0,
+      type:         'flowchart',
+      generated:    false,
+      clusterIcon:  _clusterIcon(e.title || ''),
+      clusterColor: _clusterColor(i),
+    };
+  });
+}
+
+function _showPreviewComplete() {
+  _showProgress(false);
+  _buildMapGrid(true); // preview=true → show generate buttons
+  _showEl('c-map-view');
+  document.getElementById('c-view-toggle').style.display = 'none';
+  document.getElementById('c-zoom-group').style.display = 'none';
+  document.getElementById('c-view-meta').textContent = 'Structure preview · ' +
+    CS.diagrams.length + ' clusters · ' + CS.domainLabel;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Pay mode: map cards from getSaved()
+// ════════════════════════════════════════════════════════════════════
+function _buildPayMapCards() {
+  var saved = typeof getSaved === 'function' ? getSaved() : [];
+  if (!saved.length) {
+    // Fallback: read from mermaid-editor (single diagram)
+    var code = document.getElementById('mermaid-editor').value;
+    if (code) {
+      CS.diagrams = [{
+        slug: 'diagram', name: CS.projectName,
+        steps: _countNodes(code), type: 'flowchart',
+        generated: true, code: code,
+        clusterIcon: _clusterIcon(CS.projectName),
+        clusterColor: _clusterColor(0),
+      }];
+    }
+  } else {
+    CS.diagrams = saved.filter(function(c) { return !c.isDraft; }).map(function(c, i) {
+      var m = c.meta || {};
+      return {
+        slug:         c.slug || slugify(c.name || ''),
+        name:         c.name || c.slug || 'Process ' + (i+1),
+        steps:        m.nodeCount || _countNodes(c.code || ''),
+        type:         m.type || 'flowchart',
+        generated:    true,
+        code:         c.code || '',
+        clusterIcon:  _clusterIcon(c.name || ''),
+        clusterColor: _clusterColor(i),
+      };
+    });
+  }
+}
+
+function _showPayComplete() {
+  _showProgress(false);
+  _buildMapGrid(false);
+
+  if (CS.diagrams.length) {
+    _showEl('c-map-view');
+    document.getElementById('c-view-toggle').style.display = '';
+    document.getElementById('c-zoom-group').style.display = '';
+    CS.currentView = 'map';
+    _syncViewToggle();
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Map grid builder
+// ════════════════════════════════════════════════════════════════════
+function _buildMapGrid(isPreview) {
+  var grid = document.getElementById('c-map-grid');
+  if (!grid) return;
+
+  if (!CS.diagrams.length) {
+    grid.innerHTML = '<div style="padding:40px;color:var(--gray-400);text-align:center;grid-column:1/-1;">' +
+      'No processes found. Try loading a document with a table of contents.</div>';
+    return;
+  }
+
+  grid.innerHTML = CS.diagrams.map(function(d, i) {
+    var metaText = (d.steps ? d.steps + ' steps · ' : '') + d.type;
+    if (isPreview) {
+      return '<div class="c-cluster-card" data-idx="' + i + '">' +
+        '<div class="c-cluster-icon" style="background:' + d.clusterColor.bg + ';color:' + d.clusterColor.fg + ';">' +
+          d.clusterIcon +
+        '</div>' +
+        '<div class="c-cluster-name">' + _esc(d.name) + '</div>' +
+        '<div class="c-cluster-meta">' + _esc(metaText) + '</div>' +
+        '<button class="c-cluster-generate-btn" id="ccard-btn-' + i + '" onclick="cGenerateCluster(' + i + ',this)">' +
+          '▶ Generate →' +
+        '</button>' +
+      '</div>';
+    } else {
+      return '<div class="c-cluster-card" data-idx="' + i + '" onclick="cOpenDiagram(' + i + ')">' +
+        '<div class="c-cluster-icon" style="background:' + d.clusterColor.bg + ';color:' + d.clusterColor.fg + ';">' +
+          d.clusterIcon +
+        '</div>' +
+        '<div class="c-cluster-name">' + _esc(d.name) + '</div>' +
+        '<div class="c-cluster-meta">' + _esc(metaText) + '</div>' +
+        '<div class="c-cluster-open">Open →</div>' +
+      '</div>';
+    }
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Per-cluster generate (Preview → Pay per card)
+// ════════════════════════════════════════════════════════════════════
+async function cGenerateCluster(idx, btn) {
+  var k = localStorage.getItem('fc_apikey') || '';
+  if (!k.trim()) {
+    _cToast('Add your API key in Set settings first');
+    CS.mode = 'pay';
+    cOpenSet();
+    return;
+  }
+
+  var d = CS.diagrams[idx];
+  if (!d || d.generated) return;
+
+  btn.disabled    = true;
+  btn.textContent = '⏳ Generating…';
+
+  try {
+    _applyPrefsToShim();
+
+    // Set chapter context for single-cluster generation
+    if (typeof ChapterRegistry !== 'undefined' && pipe._currentToc) {
+      var tocEntry = (pipe._currentToc.entries || []).find(function(e) {
+        return e.title === d.name || e.label === d.name;
+      });
+      if (tocEntry && typeof ChapterRegistry.loadFromToc === 'function') {
+        ChapterRegistry.load(pipe._currentToc);
+      }
+    }
+
+    // Extract chapter-only text if available
+    var chapterText = _extractChapterText(d.name, CS.fileText);
+    var inputEl     = document.getElementById('input-text');
+    if (inputEl) inputEl.value = chapterText || CS.fileText || '';
+    pipe._chapterText = chapterText || null;
+
+    if (typeof smartAction === 'function') {
+      await smartAction();
+    } else if (typeof convert === 'function') {
+      await convert();
+    }
+
+    var code = document.getElementById('mermaid-editor').value;
+    if (code) {
+      d.code      = code;
+      d.generated = true;
+      d.steps     = _countNodes(code);
+      d.type      = document.getElementById('diagram-type').value;
+
+      // Replace the generate button with "Open →"
+      var card = btn.closest('.c-cluster-card');
+      if (card) {
+        btn.remove();
+        var openEl = document.createElement('div');
+        openEl.className = 'c-cluster-open';
+        openEl.textContent = 'Open →';
+        card.appendChild(openEl);
+        card.onclick = function() { cOpenDiagram(idx); };
+
+        var metaEl = card.querySelector('.c-cluster-meta');
+        if (metaEl) metaEl.textContent = d.steps + ' steps · ' + d.type;
+      }
+
+      // Show view toggle
+      document.getElementById('c-view-toggle').style.display  = '';
+      document.getElementById('c-zoom-group').style.display   = '';
+      _cToast('✓ ' + d.name + ' generated');
+    }
+  } catch(err) {
+    _cToast('Failed: ' + err.message);
+    btn.disabled    = false;
+    btn.textContent = '▶ Generate →';
+  }
+}
+
+function _extractChapterText(chapterName, fullText) {
+  if (!fullText || !chapterName) return null;
+  var lines  = fullText.split('\n');
+  var startI = -1; var endI = lines.length;
+  var nameLc = chapterName.toLowerCase();
+
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i].toLowerCase();
+    if (l.indexOf(nameLc) !== -1 && l.length < chapterName.length + 20) {
+      startI = i; break;
+    }
+  }
+  if (startI === -1) return null;
+
+  // Find next major heading
+  for (var j = startI + 1; j < lines.length; j++) {
+    var trim = lines[j].trim();
+    if (trim.length > 3 && trim.length < 80 && /^\d+[\.\s]/.test(trim) && j > startI + 5) {
+      endI = j; break;
+    }
+  }
+  return lines.slice(startI, endI).join('\n');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Diagram view
+// ════════════════════════════════════════════════════════════════════
+function cSwitchView(v) {
+  CS.currentView = v;
+  _syncViewToggle();
+  if (v === 'map') {
+    _showEl('c-map-view'); _hideEl('c-diagram-view');
+    document.getElementById('c-zoom-group').style.display = 'none';
+  } else {
+    _hideEl('c-map-view'); _showEl('c-diagram-view');
+    document.getElementById('c-zoom-group').style.display = '';
+    if (CS.activeDiagram !== null) _renderDiagram(CS.activeDiagram);
+  }
+}
+
+function _syncViewToggle() {
+  document.getElementById('c-vtab-map').classList.toggle('active',     CS.currentView === 'map');
+  document.getElementById('c-vtab-diagram').classList.toggle('active', CS.currentView === 'diagram');
+}
+
+function cOpenDiagram(idx) {
+  CS.activeDiagram = idx;
+  cSwitchView('diagram');
+}
+
+async function _renderDiagram(idx) {
+  var d = CS.diagrams[idx];
+  if (!d) return;
+
+  var inner       = document.getElementById('c-diagram-inner');
+  var placeholder = document.getElementById('c-diagram-placeholder');
+  if (!inner) return;
+
+  if (!d.generated || !d.code) {
+    placeholder.style.display = 'flex';
+    return;
+  }
+  placeholder.style.display = 'none';
+
+  // Use the pipeline's renderMermaid if available
+  var code = typeof injectColours === 'function' ? injectColours(d.code) : d.code;
+
+  if (typeof mermaid !== 'undefined') {
+    try {
+      inner.innerHTML = '';
+      var id  = 'c-mermaid-' + Date.now();
+      var div = document.createElement('div');
+      div.id  = id;
+      inner.appendChild(div);
+      var { svg } = await mermaid.render(id, code);
+      div.innerHTML = svg;
+      // Apply zoom
+      div.querySelector('svg').style.transform = 'scale(' + CS.zoom + ')';
+      div.querySelector('svg').style.transformOrigin = 'top left';
+    } catch(e) {
+      inner.innerHTML = '<div style="padding:20px;color:var(--red-600);font-size:13px;">Render error: ' + e.message + '</div>';
+    }
+  }
+}
+
+function cZoom(delta) {
+  CS.zoom = Math.max(0.2, Math.min(3, CS.zoom + delta));
+  if (CS.activeDiagram !== null) _renderDiagram(CS.activeDiagram);
+}
+
+function cZoomFit() {
+  CS.zoom = 1.0;
+  if (CS.activeDiagram !== null) _renderDiagram(CS.activeDiagram);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Progress helpers
+// ════════════════════════════════════════════════════════════════════
+function _showProgress(on) {
+  var wrap = document.getElementById('c-progress-wrap');
+  if (wrap) wrap.style.display = on ? '' : 'none';
+}
+
+function _advanceProgressTo(idx) {
+  C_STAGE_IDX = idx;
+  C_STAGES.forEach(function(id, i) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('done', 'active');
+    if (i < idx)       el.classList.add('done');
+    else if (i === idx) el.classList.add('active');
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Export + Share
+// ════════════════════════════════════════════════════════════════════
+function cExport() {
+  var d = CS.activeDiagram !== null ? CS.diagrams[CS.activeDiagram] : null;
+  if (!d || !d.code) {
+    _cToast('No diagram to export — generate one first');
+    return;
+  }
+  // Export as SVG download
+  var inner = document.getElementById('c-diagram-inner');
+  var svg   = inner ? inner.querySelector('svg') : null;
+  if (svg) {
+    var blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href   = url; a.download = (d.slug || 'diagram') + '.svg';
+    a.click(); URL.revokeObjectURL(url);
+  } else {
+    // Fallback: export Mermaid source
+    var blob2 = new Blob([d.code], { type: 'text/plain' });
+    var url2  = URL.createObjectURL(blob2);
+    var a2    = document.createElement('a');
+    a2.href   = url2; a2.download = (d.slug || 'diagram') + '.mmd';
+    a2.click(); URL.revokeObjectURL(url2);
+  }
+}
+
+function cShareMap() {
+  if (typeof shareProjectMapURL === 'function') {
+    shareProjectMapURL();
+  } else {
+    var url = window.location.href;
+    navigator.clipboard.writeText(url).then(function() {
+      _cToast('URL copied to clipboard');
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Reset
+// ════════════════════════════════════════════════════════════════════
+function cReset() {
+  cRemoveFile();
+  CS.diagrams      = [];
+  CS.activeDiagram = null;
+  CS.autoHints     = [];
+  C_STAGE_IDX      = 0;
+  _setProjectName('Untitled project');
+  cGoStep(1);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Utilities
+// ════════════════════════════════════════════════════════════════════
+function _showEl(id) { var el = document.getElementById(id); if (el) el.style.display = ''; }
+function _hideEl(id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; }
+
+function _sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+function _fmtSize(bytes) {
+  if (bytes > 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
+  if (bytes > 1024)    return (bytes / 1024).toFixed(0) + ' KB';
+  return bytes + ' B';
+}
+
+function _fileIcon(name) {
+  var ext = (name || '').split('.').pop().toLowerCase();
+  return { pdf: '📋', docx: '📝', doc: '📝', txt: '📄', md: '📄' }[ext] || '📄';
+}
+
+function _esc(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function _countNodes(code) {
+  if (!code) return 0;
+  var m = code.match(/-->/g);
+  return m ? Math.round(m.length * 0.6) : 0;
+}
+
+// slugify is defined in storage.js; provide a fallback
+function _slugify(s) {
+  if (typeof slugify === 'function') return slugify(s);
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+// Domain → cluster icons
+var C_ICON_MAP = [
+  { keys: ['withdraw','payout','cash out'],            icon: '↓', bg: '#e8f5ef', fg: '#2d7a5f' },
+  { keys: ['payment','pay','deposit','transfer'],       icon: '⊟', bg: '#fff8e1', fg: '#b45309' },
+  { keys: ['verify','kyc','id','identity','compliance'],icon: '⊛', bg: '#ede9fe', fg: '#6d28d9' },
+  { keys: ['account','user','profile','registration'],  icon: '⊙', bg: '#dbeafe', fg: '#1d4ed8' },
+  { keys: ['bonus','promo','reward','loyalty'],         icon: '★', bg: '#fce7f3', fg: '#9d174d' },
+  { keys: ['sport','bet','casino','game','play'],       icon: '◎', bg: '#d1fae5', fg: '#065f46' },
+  { keys: ['data','gdpr','privacy','security'],         icon: '⊠', bg: '#fed7aa', fg: '#92400e' },
+  { keys: ['support','cs','chat','ticket','service'],   icon: '⊕', bg: '#cffafe', fg: '#155e75' },
+  { keys: ['report','analytics','stat','metric'],       icon: '≋', bg: '#f3f4f6', fg: '#374151' },
+];
+
+var C_FALLBACK_PALETTE = [
+  { bg:'#e8f5ef', fg:'#2d7a5f' }, { bg:'#fff8e1', fg:'#b45309' },
+  { bg:'#ede9fe', fg:'#6d28d9' }, { bg:'#dbeafe', fg:'#1d4ed8' },
+  { bg:'#fce7f3', fg:'#9d174d' }, { bg:'#d1fae5', fg:'#065f46' },
+  { bg:'#fed7aa', fg:'#92400e' }, { bg:'#cffafe', fg:'#155e75' },
+  { bg:'#f3f4f6', fg:'#374151' },
+];
+
+function _clusterIcon(name) {
+  var l = (name || '').toLowerCase();
+  for (var i = 0; i < C_ICON_MAP.length; i++) {
+    for (var j = 0; j < C_ICON_MAP[i].keys.length; j++) {
+      if (l.indexOf(C_ICON_MAP[i].keys[j]) !== -1) return C_ICON_MAP[i].icon;
+    }
+  }
+  return '◈';
+}
+
+function _clusterColor(idx) {
+  return C_FALLBACK_PALETTE[idx % C_FALLBACK_PALETTE.length];
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Project selector sync (called when pro-tool renderProjectSelector fires)
+// ════════════════════════════════════════════════════════════════════
+function _syncProjectSelector() {
+  // Consumer doesn't use the dropdown — just keep currentProject in sync
+  if (typeof currentProject !== 'undefined' && currentProject) {
+    if (!CS.projectName || CS.projectName === 'Untitled project') {
+      _setProjectName(currentProject.name);
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Init
+// ════════════════════════════════════════════════════════════════════
+(function init() {
+  // Apply saved prefs to Set UI
+  _updateGenerateBtn();
+
+  // If API key already saved, indicate in Set button
+  var hasKey = !!(localStorage.getItem('fc_apikey') || '').trim();
+  if (hasKey) {
+    CS.mode = 'pay';
+    document.getElementById('c-set-btn').classList.add('has-key');
+  } else {
+    CS.mode = localStorage.getItem(C_PREFS_KEY)
+      ? (JSON.parse(localStorage.getItem(C_PREFS_KEY) || '{}').mode || 'preview')
+      : 'preview';
+  }
+
+  // Mermaid init (consumer config)
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+  }
+
+  // Suppress ui.js init noise (CodeMirror etc.) that relies on missing elements
+  window.cmEditor = null;
+})();
+</script>
+</body>
+</html>

@@ -1988,11 +1988,32 @@ function shareViaURL() {
     // Compress with base64 encoding of URI-encoded string
     var encoded = btoa(unescape(encodeURIComponent(code)));
     var url = window.location.origin + window.location.pathname + '?c=' + encoded;
-    document.getElementById('share-url').value = url;
-    document.getElementById('share-banner').style.display = 'block';
+    _showShareBanner('⇗ Share this chart', url);
   } catch(e) {
     showToast('Could not generate share URL: ' + e.message);
   }
+}
+
+// Share the current project's Map view as a URL hash link.
+// Recipients open the link and the app auto-navigates to the Map tab
+// for that project, pulling data from GitHub (public read) as needed.
+function shareProjectMapURL() {
+  if (typeof currentProject === 'undefined' || !currentProject) {
+    showToast('Select a project first — use the PROJECT selector in the config bar');
+    return;
+  }
+  var base = window.location.origin + window.location.pathname;
+  var hash = 'project=' + encodeURIComponent(currentProject.slug) + '&view=map';
+  var url  = base + '#' + hash;
+  _showShareBanner('⇗ Share project map — ' + currentProject.name, url);
+}
+
+function _showShareBanner(title, url) {
+  var banner = document.getElementById('share-banner');
+  var h4     = banner ? banner.querySelector('h4') : null;
+  if (h4) h4.textContent = title;
+  document.getElementById('share-url').value = url;
+  if (banner) banner.style.display = 'block';
 }
 
 function copyShareURL() {
@@ -2003,20 +2024,197 @@ function copyShareURL() {
   });
 }
 
-// Load shared chart from URL on startup
+// ── Shared-link bootstrap on startup ─────────────────────────────
+// Handles two URL patterns on page load:
+//   1. ?c=<base64>          — single chart (legacy, unchanged)
+//   2. #project=<slug>&view=map — project Map view deep-link (v4.1.0)
 function loadSharedChart() {
+  // Pattern 1: single chart via query param
   try {
-    var params = new URLSearchParams(window.location.search);
+    var params  = new URLSearchParams(window.location.search);
     var encoded = params.get('c');
-    if (!encoded) return;
-    var code = decodeURIComponent(escape(atob(encoded)));
-    if (!code.trim()) return;
-    var coloured = injectColours(code);
-    document.getElementById('mermaid-editor').value = coloured;
-    showToast('Shared chart loaded from URL');
-    setTimeout(function() { renderMermaid(coloured); }, 500);
+    if (encoded) {
+      var code = decodeURIComponent(escape(atob(encoded)));
+      if (code.trim()) {
+        var coloured = injectColours(code);
+        document.getElementById('mermaid-editor').value = coloured;
+        showToast('Shared chart loaded from URL');
+        setTimeout(function() { renderMermaid(coloured); }, 500);
+        return; // do not process hash if query param present
+      }
+    }
   } catch(e) {
     console.warn('Could not load shared chart from URL:', e);
+  }
+
+  // Pattern 2: project map deep-link via hash
+  _loadSharedProjectView();
+}
+
+// Parse #project=<slug>&view=map from the URL hash and navigate.
+// Called once on startup from loadSharedChart().
+// For recipients who don't have the project in localStorage, this
+// fetches data/projects.json and the process list from GitHub
+// (public read — no PAT required for public repos) and merges them
+// into localStorage before switching to the Map tab.
+function _loadSharedProjectView() {
+  var hash = window.location.hash.replace(/^#/, '');
+  if (!hash) return;
+  var parts = {};
+  hash.split('&').forEach(function(seg) {
+    var kv = seg.split('=');
+    if (kv.length === 2) parts[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]);
+  });
+  var projSlug = parts['project'];
+  var view     = parts['view'];
+  if (!projSlug || view !== 'map') return;
+
+  // Defer until the DOM + project selector are ready
+  setTimeout(function() {
+    _activateSharedProjectMap(projSlug);
+  }, 600);
+}
+
+// Activate Map tab for projSlug, loading from GitHub if needed.
+async function _activateSharedProjectMap(projSlug) {
+  try {
+    showToast('Loading project map…');
+
+    // 1. Try to find project in localStorage
+    var projects = (typeof getProjects === 'function') ? getProjects() : [];
+    var proj     = projects.find(function(p) { return p.slug === projSlug; });
+
+    // 2. If not found locally, fetch from GitHub (public read)
+    if (!proj) {
+      var result = await _ghReadPublic('data/projects.json');
+      if (result) {
+        var remote = JSON.parse(result);
+        proj = remote.find(function(p) { return p.slug === projSlug; });
+        if (proj) {
+          // Merge into localStorage so the project selector shows it
+          var local  = (typeof getProjects === 'function') ? getProjects() : [];
+          var exists = local.find(function(p) { return p.slug === projSlug; });
+          if (!exists) { local.push(proj); if (typeof putProjects === 'function') putProjects(local); }
+        }
+      }
+    }
+
+    if (!proj) {
+      showToast('Project "' + projSlug + '" not found — is the repo public or is a GitHub PAT set?');
+      return;
+    }
+
+    // 3. Select this project
+    if (typeof currentProject !== 'undefined') window.currentProject = proj;
+    var sel = document.getElementById('gh-project');
+    if (sel) {
+      // Ensure the option exists in the selector
+      var opt = sel.querySelector('option[value="' + projSlug + '"]');
+      if (!opt) {
+        opt = document.createElement('option');
+        opt.value = projSlug;
+        opt.textContent = proj.name;
+        sel.insertBefore(opt, sel.lastElementChild); // before "+ Create new project…"
+      }
+      sel.value = projSlug;
+    }
+    if (typeof saveLastProject === 'function') saveLastProject(projSlug);
+
+    // 4. Sync ChapterRegistry for this project
+    if (typeof ChapterRegistry !== 'undefined') ChapterRegistry.restoreFromStorage(projSlug);
+
+    // 5. If local saved list is empty for this project, attempt GitHub fetch
+    var saved = (typeof getSaved === 'function') ? getSaved() : [];
+    var hasLocal = saved.some(function(c) {
+      return (c.meta && c.meta.project === projSlug) || (c.slug && c.slug.startsWith(projSlug + '-'));
+    });
+    if (!hasLocal) {
+      await _mergeChartsFromGitHub(projSlug);
+    }
+
+    // 6. Navigate to Analysis → Map tab
+    if (typeof switchRightTab === 'function') switchRightTab('analysis');
+    // Small delay so renderAnalysisDashboard renders the container first
+    setTimeout(function() {
+      if (typeof _activateAnPill === 'function') _activateAnPill('map');
+    }, 200);
+
+    showToast('✓ Project map loaded: ' + proj.name);
+  } catch(e) {
+    console.warn('_activateSharedProjectMap failed:', e);
+    showToast('Could not load project map: ' + e.message);
+  }
+}
+
+// Fetch from GitHub without requiring a PAT (works for public repos).
+// Returns decoded content string or null.
+async function _ghReadPublic(path) {
+  try {
+    var base    = 'https://api.github.com/repos/' + GH_REPO + '/contents/';
+    var branch  = typeof GH_BRANCH !== 'undefined' ? GH_BRANCH : 'main';
+    var headers = { 'Accept': 'application/vnd.github.v3+json' };
+    var pat     = (typeof ghPAT === 'function') ? ghPAT() : '';
+    if (pat) headers['Authorization'] = 'token ' + pat;
+    var res = await fetch(base + path + '?ref=' + branch, { headers: headers });
+    if (!res.ok) return null;
+    var data = await res.json();
+    return decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
+  } catch(e) { return null; }
+}
+
+// Fetch all .json sidecars for a project from GitHub and merge into localStorage.
+// This lets recipients of a shared map link see the process corpus.
+async function _mergeChartsFromGitHub(projSlug) {
+  try {
+    var base    = 'https://api.github.com/repos/' + GH_REPO + '/contents/';
+    var branch  = typeof GH_BRANCH !== 'undefined' ? GH_BRANCH : 'main';
+    var headers = { 'Accept': 'application/vnd.github.v3+json' };
+    var pat     = (typeof ghPAT === 'function') ? ghPAT() : '';
+    if (pat) headers['Authorization'] = 'token ' + pat;
+
+    var dirRes = await fetch(base + 'data/charts/' + projSlug + '/processes?ref=' + branch, { headers: headers });
+    if (!dirRes.ok) return;
+    var files = await dirRes.json();
+    if (!Array.isArray(files)) return;
+
+    var jsonFiles = files.filter(function(f) { return f.name.endsWith('.json'); });
+    if (!jsonFiles.length) return;
+
+    var saved = (typeof getSaved === 'function') ? getSaved() : [];
+    var changed = false;
+
+    for (var i = 0; i < jsonFiles.length; i++) {
+      var f = jsonFiles[i];
+      var slug = f.name.replace('.json', '');
+      var already = saved.find(function(c) { return (c.slug || '') === slug; });
+      if (already) continue;
+
+      // Fetch the sidecar JSON
+      var jRes = await fetch(f.download_url);
+      if (!jRes.ok) continue;
+      var meta = await jRes.json();
+
+      // Fetch the .mmd
+      var mmdUrl = f.download_url.replace('.json', '.mmd');
+      var mRes   = await fetch(mmdUrl);
+      var code   = mRes.ok ? await mRes.text() : '';
+
+      saved.push({
+        slug:     slug,
+        name:     meta.name || slug,
+        code:     code,
+        meta:     meta,
+        savedAt:  meta.savedAt || new Date().toISOString(),
+        version:  meta.version || 1,
+        isDraft:  false,
+        fromGitHub: true,
+      });
+      changed = true;
+    }
+
+    if (changed && typeof putSaved === 'function') putSaved(saved);
+  } catch(e) {
+    console.warn('_mergeChartsFromGitHub:', e.message);
   }
 }
 

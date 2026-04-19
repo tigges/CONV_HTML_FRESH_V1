@@ -2400,6 +2400,7 @@ function _anMap(ex) {
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
       '<div class="an-section-title" style="margin:0;">⊙ Process Corpus</div>' +
       '<div style="display:flex;gap:6px;">' +
+        '<button class="an-map-generate-btn" onclick="shareProjectMapURL()" style="font-size:11px;padding:4px 10px;" title="Share this project map via URL">⇗ Share Map</button>' +
         '<button class="an-map-generate-btn" onclick="_exportProjectMapHtml()" style="font-size:11px;padding:4px 10px;" title="Export interactive HTML map">↗ Export Map</button>' +
       '</div>' +
     '</div>' +
@@ -3790,6 +3791,37 @@ var TAG_BAR_COLORS = {
 
 // ── Version changelog — add a new entry at the TOP for each release ──
 var CHANGELOG = [
+  {
+    version: 'v4.2.0',
+    date: '2026-04-19',
+    summary: 'Consumer view — consumer.html: 3-step wizard UI (Inject → Run → View) wrapping the existing pipeline via Option B DOM shim',
+    changes: [
+      'consumer.html: new standalone page. Imports js/storage.js, js/pipeline.js, js/generate.js, js/render.js, js/ui.js unchanged. A hidden #flowinject-shim div provides all ~120 element IDs the pipeline modules reference, so zero changes were needed to any existing JS file.',
+      'Step 1 — Inject: drag-drop zone supporting PDF, DOCX, TXT, MD. File card with icon, size, domain chip. Runs detectTOC() + preParse() deterministically on load. Green info box shows "Table of contents detected — N clusters found". Auto-detects project name (detectProjectFromDocument) and domain (keyword scoring). 800ms auto-advance to Step 2.',
+      'Step 2 — Run: compact file summary card + project/context card with inline breadcrumb editing. Generate button (full width) + Set button (settings gear). Caption shows estimated time and cost derived from cluster count and model.',
+      'Set popover: Free/Pay mode toggle (Preview = deterministic, Full diagrams = LLM). API key input shown only in Pay mode when no key is saved in localStorage. Advanced section (collapsed by default): model selector (Haiku/Sonnet/Opus), style (auto/flowchart/swimlane/sequence), domain, orientation. Settings persist in fc_consumer_prefs. On confirm, writes to shim elements so pipeline reads correct values.',
+      'Auto-suggestion chips: amber chips shown near Set button when system auto-detects domain, style, or TOC structure. Clicking chip opens Set popover. Dismissable per-session. Shown in both Step 2 and Step 3 header.',
+      'Step 3 — View (Preview mode): deterministic structure map built from TOC entries. Each cluster card shows icon (keyword-matched), name, and a "▶ Generate →" button. Clicking Generate on a single card runs the LLM pipeline for that cluster only (per-cluster pay), replaces button with "Open →" on completion.',
+      'Step 3 — View (Full mode): full pipeline via smartAction(). 4-bullet progress list driven by setLoading() interception (keyword→stage mapping). After completion, map cards populated from getSaved(). Map/Diagram toggle. Diagram view with −/+/⤢ zoom. Export (SVG download) + Share (shareProjectMapURL) buttons.',
+      'Consumer adapter: wraps setLoading, showToast, switchRightTab, renderAnalysisDashboard, renderProjectSelector as no-ops or consumer-specific implementations. All pro-tool UI chrome suppressed.',
+      'Domain auto-detection: 6-domain scoring table (iGaming, Finance, Healthcare, Logistics, SaaS, Legal) on first 3000 chars. Cluster icon palette: 9 keyword→icon mappings + 9-colour fallback palette.',
+      'APP_VERSION bumped to v4.2.0.',
+    ],
+  },
+  {
+    version: 'v4.1.0',
+    date: '2026-04-19',
+    summary: 'Share via URL — project map deep-link; recipients auto-navigate to Map tab with GitHub-backed chart data',
+    changes: [
+      'shareProjectMapURL(): new function in generate.js. Generates a URL of the form <page>#project=<slug>&view=map for the currently selected project. Uses the existing share-banner overlay (reuses _showShareBanner helper). Accessible via the new "⇗ Share Map" button in the Analysis → Map tab toolbar.',
+      '_showShareBanner(title, url): extracted helper that updates the share-banner <h4> title and URL field before showing the overlay. Both shareViaURL() (single chart) and shareProjectMapURL() (project map) go through this helper.',
+      '_loadSharedProjectView(): parses #project=<slug>&view=map from window.location.hash on startup. Triggered by loadSharedChart() after the existing ?c= query-param path returns early. Defers via setTimeout(600) so the DOM and project selector are fully initialised.',
+      '_activateSharedProjectMap(slug): async function. (1) Looks up the project in localStorage; (2) Falls back to fetching data/projects.json from GitHub (public read, no PAT needed for public repos); (3) Merges the project into the local project list + project selector; (4) Restores ChapterRegistry for the project; (5) Calls _mergeChartsFromGitHub() if no local saved charts match the project; (6) Calls switchRightTab("analysis") then _activateAnPill("map").',
+      '_ghReadPublic(path): lightweight GitHub file reader that uses GH_REPO/GH_BRANCH from ui.js globals, with optional PAT from ghPAT(). Returns decoded string or null.',
+      '_mergeChartsFromGitHub(projSlug): reads data/charts/{slug}/processes directory listing from GitHub, downloads each .json sidecar + .mmd file that is not already in getSaved(), and inserts entries flagged fromGitHub:true into localStorage via putSaved(). Called once on deep-link navigation when local saved list has no matching charts.',
+      '"⇗ Share Map" button added to the Process Corpus toolbar in Analysis → Map tab (next to "↗ Export Map"). Calls shareProjectMapURL().',
+    ],
+  },
   {
     version: 'v3.12.1',
     date: '2026-04-17',
